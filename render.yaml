@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: nyc-business-location-advisor
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app/streamlit_app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CENSUS_API_KEY
+        sync: false
+      - key: NYC_APP_TOKEN
+        sync: false
+    healthCheckPath: /
