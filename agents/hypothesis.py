@@ -24,48 +24,52 @@ class HypothesisAgent:
         top_neighborhoods = eda_results.get('top_neighborhoods', [])
         summary = eda_results.get('summary', {})
         
-        system_prompt = """You are a business location advisor expert. 
+        system_prompt = """You are a senior business location advisor. Your goal is to provide clear, actionable advice to a business owner who is NOT a data scientist.
 
-Given analysis results, provide a final recommendation for the best location to open a business in NYC.
+Follow these communication rules:
+1. USE ACCESSIBLE LANGUAGE: Avoid or explain technical jargon. Use plain English.
+2. USE ANALOGIES: For close rankings, use terms like "photo finish", "neck-and-neck", or "a statistical tie".
+3. BE CONCISE: Get straight to the point.
+4. FOCUS ON THE 'WHY': Explain how the data translates to business success (e.g., "More foot traffic means more potential walk-in customers").
 
 Your response must be valid JSON with this structure:
 {
-    "best_location": "neighborhood name",
-    "borough": "borough name",
+    "best_location": "Zip / Neighborhood name (e.g. 'Brooklyn - 11208')",
+    "borough": "Borough name",
     "score": float,
     "reasoning": [
-        "reason 1 with specific data",
-        "reason 2 with specific data",
-        "reason 3 with specific data"
+        "Plain English reason with a specific data point",
+        "Plain English reason with a specific data point",
+        "Plain English reason with a specific data point"
     ],
     "trade_offs": [
-        "trade-off 1",
-        "trade-off 2"
+        "Simple trade-off statement",
+        "Simple trade-off statement"
     ],
     "top_alternatives": [
-        {"name": "alternative 1", "score": float, "key_strength": "what makes it good"},
-        {"name": "alternative 2", "score": float, "key_strength": "what makes it good"}
+        {"name": "alternative 1", "score": float, "key_strength": "Plain English benefit"},
+        {"name": "alternative 2", "score": float, "key_strength": "Plain English benefit"}
     ],
     "confidence": "high/medium/low",
-    "key_insights": "2-3 sentence summary of the analysis"
+    "confidence_reasoning": "A simple sentence explaining your confidence (e.g., 'The data is very strong in this area.')",
+    "key_insights": "2-3 sentence executive summary avoiding jargon."
 }
-
-Base your recommendation on concrete data. Reference specific metrics like competition count, median income, population density, etc.
 """
         
-        user_message = f"""Recommend the best location for a {business_type} based on this analysis:
+        user_message = f"""Advise the business owner on the best location for a {business_type} based on this analysis:
 
 TOP NEIGHBORHOODS:
 {json.dumps(top_neighborhoods[:5], indent=2)}
 
-SUMMARY STATISTICS:
-- Total neighborhoods analyzed: {summary.get('total_neighborhoods', 'N/A')}
-- Average score: {summary.get('avg_score', 'N/A')}
-- Average competition: {summary.get('metrics', {}).get('avg_competition', 'N/A')}
-- Average median income: {summary.get('metrics', {}).get('avg_income', 'N/A')}
-- Average rent: {summary.get('metrics', {}).get('avg_rent', 'N/A')}
+SENSITIVITY FINDINGS (TESTING IF THE RANKING HOLDS):
+{json.dumps(summary.get('sensitivity_analysis', {}), indent=2)}
 
-Provide a clear recommendation with specific data points and honest trade-offs.
+Note: If the top locations are within 2 points of each other, explain that it's a "photo finish" where any of the top choices are excellent options. If the sensitivity analysis shows the lead is "fragile", explain that while Manhattan leads on paper, Brooklyn is a very strong and stable runner-up.
+"""
+        if "coffee" in business_type.lower():
+            user_message += """
+IMPORTANT FOR COFFEE SHOPS: 
+You MUST recommend the location that has the absolute highest overall `score` mathematically. The scores already perfectly encapsulate the weighted preferences for income, demand, and foot traffic. Do not override the mathematical ranking! Do not recommend a location simply because it has higher income if its overall score is lower than the top rank. ALWAYS recommend the #1 top-scoring option.
 """
         
         message = self.client.messages.create(
@@ -95,8 +99,6 @@ Provide a clear recommendation with specific data points and honest trade-offs.
         """
         explanation = f"""
 🎯 RECOMMENDATION: {recommendation['best_location']}, {recommendation['borough']}
-Score: {recommendation['score']:.3f}
-Confidence: {recommendation['confidence'].upper()}
 
 📊 WHY THIS LOCATION:
 """
@@ -109,7 +111,7 @@ Confidence: {recommendation['confidence'].upper()}
         
         explanation += "\n🏆 TOP ALTERNATIVES:\n"
         for i, alt in enumerate(recommendation['top_alternatives'], 1):
-            explanation += f"{i}. {alt['name']} (Score: {alt['score']:.3f}) - {alt['key_strength']}\n"
+            explanation += f"{i}. {alt['name']} (Score: {float(alt['score']):.1f}) - {alt['key_strength']}\n"
         
         explanation += f"\n💡 KEY INSIGHT:\n{recommendation['key_insights']}\n"
         

@@ -111,7 +111,8 @@ ANALYSIS METADATA:
             'artifacts': {
                 'csv': csv_path,
                 'report': report_path,
-                'charts': chart_paths
+                'charts': chart_paths,
+                'figures': charts
             },
             'iterations': self.iteration
         }

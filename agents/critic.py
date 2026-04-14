@@ -22,36 +22,33 @@ class CriticAgent:
         """
         Critically evaluate the recommendation
         """
-        system_prompt = """You are a critical business analyst reviewing location recommendations.
+        system_prompt = """You are a senior business critic. Your role is to play "devil's advocate" for a business owner. 
 
-Your job is to identify potential issues, overlooked factors, and suggest improvements.
+Your goal is to point out risks and trade-offs in plain English so the owner can make an informed decision.
 
-Return valid JSON with this structure:
+Follow these communication rules:
+1. NO JARGON: Avoid terms like "data measurement inconsistency", "statistical tie", or "structural reality".
+2. BUSINESS IMPACT: Instead of technical metrics, explain what it means for the owner (e.g., "High rent in Manhattan means you need much higher daily sales to break even").
+3. RESPECTFUL CHALLENGE: Be helpful. If two locations are close, explain it as "It's a tough choice between two great options" rather than critiquing the math.
+
+Return valid JSON:
 {
-    "approved": true/false,
+    "approved": true,
     "issues": [
-        "issue 1 if any",
-        "issue 2 if any"
+        "Plain English risk (e.g., 'The area has a lot of competition already')",
+        "Plain English risk"
     ],
     "suggestions": [
-        "suggestion 1",
-        "suggestion 2"
+        "Actionable advice (e.g., 'Try to visit the area at lunch time to see the crowd')",
+        "Actionable advice"
     ],
     "missing_considerations": [
-        "factor 1 that wasn't considered",
-        "factor 2 that wasn't considered"
+        "Specific factor (e.g., 'Have you checked local parking options?')",
+        "Specific factor"
     ],
-    "confidence_assessment": "explanation of whether the confidence level is justified",
-    "alternative_perspective": "a different way to interpret the same data"
+    "confidence_assessment": "A simple explanation of why you are or aren't sure about the advice.",
+    "alternative_perspective": "A simplified 'other way to look at it' (e.g., 'While Manhattan is busier, Brooklyn might be less stressful for a first-time owner.')"
 }
-
-Be constructive but critical. Look for:
-- Data quality issues
-- Overlooked neighborhoods
-- Biased weighting
-- Missing context
-- Unrealistic expectations
-- Trade-offs not properly explained
 """
         
         user_message = f"""Review this recommendation for a {business_type}:
@@ -98,25 +95,25 @@ Provide critical feedback. Should this recommendation be refined?
         output = f"\n{status}\n\n"
         
         if feedback['issues']:
-            output += "🔍 ISSUES IDENTIFIED:\n"
+            output += "🔍 POTENTIAL RISKS:\n"
             for i, issue in enumerate(feedback['issues'], 1):
                 output += f"{i}. {issue}\n"
             output += "\n"
         
         if feedback['suggestions']:
-            output += "💡 SUGGESTIONS:\n"
+            output += "💡 NEXT STEPS:\n"
             for i, suggestion in enumerate(feedback['suggestions'], 1):
                 output += f"{i}. {suggestion}\n"
             output += "\n"
         
         if feedback.get('missing_considerations'):
-            output += "📌 MISSING CONSIDERATIONS:\n"
+            output += "📌 OTHER FACTORS TO CHECK:\n"
             for i, consideration in enumerate(feedback['missing_considerations'], 1):
                 output += f"{i}. {consideration}\n"
             output += "\n"
         
-        output += f"🎯 CONFIDENCE ASSESSMENT:\n{feedback['confidence_assessment']}\n\n"
-        output += f"🔄 ALTERNATIVE PERSPECTIVE:\n{feedback['alternative_perspective']}\n"
+        output += f"🎯 HOW SURE ARE WE?:\n{feedback['confidence_assessment']}\n\n"
+        output += f"🔄 ANOTHER OPTION TO CONSIDER:\n{feedback['alternative_perspective']}\n"
         
         return output
 

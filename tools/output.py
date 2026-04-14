@@ -4,6 +4,7 @@ import plotly.graph_objects as go
 from typing import List, Dict
 import os
 from datetime import datetime
+from tools.pdf_generator import generate_pdf_report
 
 
 class OutputGenerator:
@@ -15,7 +16,7 @@ class OutputGenerator:
         """
         Save DataFrame to CSV
         """
-        filepath = os.path.join(self.output_dir, filename)
+        filepath = os.path.join(self.output_dir, filename).replace('\\', '/')
         df.to_csv(filepath, index=False)
         return filepath
     
@@ -23,8 +24,8 @@ class OutputGenerator:
         """
         Save text report to file
         """
-        filepath = os.path.join(self.output_dir, filename)
-        with open(filepath, 'w') as f:
+        filepath = os.path.join(self.output_dir, filename).replace('\\', '/')
+        with open(filepath, 'w', encoding='utf-8') as f:
             f.write(content)
         return filepath
     
@@ -59,7 +60,12 @@ class OutputGenerator:
                 color='final_score',
                 color_continuous_scale='Viridis'
             )
-            fig1.update_layout(xaxis_tickangle=-45)
+            fig1.update_layout(
+                xaxis_tickangle=-45,
+                margin=dict(b=140),
+                font=dict(family="Inter, sans-serif")
+            )
+            fig1.update_xaxes(tickfont=dict(size=12))
             figures.append(fig1)
         
         metric_cols = ['competition_count', 'median_income', 'median_rent', 'population']
@@ -133,11 +139,18 @@ class OutputGenerator:
         
         for i, fig in enumerate(figures):
             filename = f"chart_{i+1}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html"
-            filepath = os.path.join(self.output_dir, filename)
+            filepath = os.path.join(self.output_dir, filename).replace('\\', '/')
             fig.write_html(filepath)
             filepaths.append(filepath)
         
         return filepaths
+
+    def save_pdf(self, result: Dict[str, Any], filename: str) -> str:
+        """
+        Generate and save a PDF report
+        """
+        return generate_pdf_report(result, filename, self.output_dir)
+
 
 
 def save_csv(df: pd.DataFrame, filename: str, output_dir: str = "data/outputs") -> str:

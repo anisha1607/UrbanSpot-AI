@@ -64,7 +64,27 @@ class EDAAgent:
         print("Step 4: Generating summary statistics...")
         summary = summarize_results(self.scored_data, top_n=10)
         
-        print("Step 5: Creating visualizations...")
+        print("Step 5: Conducting sensitivity analysis...")
+        sensitivity_results = {}
+        top_original = self.scored_data.iloc[0]['neighborhood'] if not self.scored_data.empty else None
+        
+        for weight_name, current_val in weights.items():
+            for variance in [0.1, -0.1]:
+                test_weights = weights.copy()
+                test_weights[weight_name] = max(0, min(1, current_val + variance))
+                test_scores = compute_scores(self.merged_data, test_weights)
+                
+                if not test_scores.empty:
+                    top_test = test_scores.iloc[0]['neighborhood']
+                    if top_test != top_original:
+                        sensitivity_results[f"{weight_name} {'+' if variance > 0 else '-'}{abs(variance)*100:.0f}%"] = f"Top location shifts to {top_test}"
+        
+        if not sensitivity_results:
+            sensitivity_results['robustness'] = "The top recommendation is robust to 10% weight variance."
+            
+        summary['sensitivity_analysis'] = sensitivity_results
+        
+        print("Step 6: Creating visualizations...")
         self.charts = generate_charts(self.scored_data)
         print(f"  Generated {len(self.charts)} charts")
         

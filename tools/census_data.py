@@ -23,19 +23,35 @@ class CensusDataCollector:
             "B01003_001E",  # Total population
             "B19013_001E",  # Median household income
             "B25064_001E",  # Median gross rent
+            "B01002_001E",  # Median age
+            "B08301_001E",  # Total workers 16+ commuting
+            "B08301_021E",  # Worked from home
             "NAME"
         ]
         
         params = {
             "get": ",".join(variables),
             "for": "zip code tabulation area:*",
-            "in": "state:36",  # New York state
-            "key": self.api_key
         }
-        
+        if self.api_key:
+            params["key"] = self.api_key
+
         response = requests.get(endpoint, params=params)
+
+        # If the provided Census key is invalid, retry without a key.
+        if 'text/html' in response.headers.get('content-type', '') and 'Invalid Key' in response.text and self.api_key:
+            params.pop("key", None)
+            response = requests.get(endpoint, params=params)
+
+        if 'text/html' in response.headers.get('content-type', ''):
+            if 'Invalid Key' in response.text:
+                raise ValueError(
+                    "Invalid Census API key. Please get a valid key from: "
+                    "https://api.census.gov/data/key_signup.html"
+                )
+            raise ValueError(f"Census API returned HTML error: {response.text[:200]}")
+
         response.raise_for_status()
-        
         data = response.json()
         df = pd.DataFrame(data[1:], columns=data[0])
         
@@ -43,12 +59,24 @@ class CensusDataCollector:
             "B01003_001E": "population",
             "B19013_001E": "median_income",
             "B25064_001E": "median_rent",
+            "B01002_001E": "median_age",
+            "B08301_001E": "total_workers",
+            "B08301_021E": "wfh_workers",
             "NAME": "name",
             "zip code tabulation area": "zipcode"
         })
         
-        for col in ['population', 'median_income', 'median_rent']:
+        numeric_cols = ['population', 'median_income', 'median_rent', 'median_age', 'total_workers', 'wfh_workers']
+        for col in numeric_cols:
             df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Filter out extreme negative values (-666666666 etc used by Census for missing data)
+        for col in numeric_cols:
+            df.loc[df[col] < 0, col] = None
+        
+        # Calculate rates
+        df['wfh_rate'] = df['wfh_workers'] / df['total_workers']
+        df['wfh_rate'] = df['wfh_rate'].fillna(0)
         
         nyc_zipcodes = self._get_nyc_zipcodes()
         df = df[df['zipcode'].isin(nyc_zipcodes)]

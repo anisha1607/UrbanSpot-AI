@@ -3,9 +3,7 @@ venv/
 *.pyc
 __pycache__/
 .DS_Store
-data/outputs/*.csv
-data/outputs/*.txt
-data/outputs/*.html
+data/
 .ipynb_checkpoints/
 *.log
-.env
+.vscode/

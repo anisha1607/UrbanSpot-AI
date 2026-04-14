@@ -52,8 +52,8 @@ class NYCDataCollector:
         
         params = {
             "$limit": limit,
-            "$select": "camis,dba,boro,building,street,zipcode,cuisine_description,inspection_date,grade",
-            "$where": "grade IS NOT NULL"
+            "$select": "camis,dba,boro,building,street,zipcode,cuisine_description,inspection_date,grade,latitude,longitude",
+            "$where": "grade IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL"
         }
         
         if self.app_token:
