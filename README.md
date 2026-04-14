@@ -86,6 +86,3 @@ Visualization: Plotly, Matplotlib
 ```bash
 python -m pytest tests/
 ```
-
----
-**Built for the "Data Analyst Agent" Project - Columbia University**
