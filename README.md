@@ -65,9 +65,14 @@ Visualization: Plotly, Matplotlib
 | **Tool Calling** | Explicit model-side tool use (`set_analysis_plan`) | `agents/planner.py` |
 | **Multi-Agent Pattern** | Orchestrator + Generator/Critic loop | `agents/orchestrator.py` |
 | **Iterative Refinement** | Refinement loop based on Critic feedback | `agents/orchestrator.py` |
-| **Artifacts** | PDF reports, PNG charts, CSV exports | `tools/pdf_generator.py`, `tools/output.py` |
+| **Artifacts** | PDF reports, PNG charts, CSV exports, **Email Delivery** | `tools/pdf_generator.py`, `tools/email_service.py` |
 | **Data Visualization** | Plotly & Matplotlib dashboard & report charts | `app/streamlit_app.py`, `tools/pdf_generator.py` |
 | **Structured Output** | JSON-mode and Pydantic-style responses | `agents/*.py` |
+
+## ✨ Premium Features
+- **📩 On-Demand Email Reports:** Generate a professional PDF report containing the recommendation, critic feedback, and all visualizations, and have it delivered directly to your inbox.
+- **🛡️ Fail-Safe Charting:** Robust visualization engine with automatic fallback to Matplotlib ensures charts render even in restrictive environments.
+- **🗣️ Human-Centric Analysis:** AI insights translated from technical jargon into plain English for business owners.
 
 ## 🚀 Installation & Setup
 
