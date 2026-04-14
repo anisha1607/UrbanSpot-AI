@@ -65,7 +65,7 @@ Visualization: Plotly, Matplotlib
 | **Tool Calling** | Explicit model-side tool use (`set_analysis_plan`) | `agents/planner.py` |
 | **Multi-Agent Pattern** | Orchestrator + Generator/Critic loop | `agents/orchestrator.py` |
 | **Iterative Refinement** | Refinement loop based on Critic feedback | `agents/orchestrator.py` |
-| **Artifacts** | PDF reports, PNG charts, CSV exports, **Email Delivery** | `tools/pdf_generator.py`, `tools/email_service.py` |
+| **Artifacts** | PDF reports, PNG charts, CSV exports, Email Delivery | `tools/pdf_generator.py`, `tools/email_service.py` |
 | **Data Visualization** | Plotly & Matplotlib dashboard & report charts | `app/streamlit_app.py`, `tools/pdf_generator.py` |
 | **Structured Output** | JSON-mode and Pydantic-style responses | `agents/*.py` |
 
