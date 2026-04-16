@@ -1,0 +1,40 @@
+# Secrets — NEVER include in image
+.env
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Data outputs (generated at runtime)
+data/outputs/
+data/raw/
+
+# Dev/test files
+scratch/
+tests/
+debug_*.py
+test_*.py
+examples.py
+
+# IDE
+.vscode/
+.DS_Store
+
+# Docs (not needed in container)
+docs/
+
+# Existing render config
+render.yaml

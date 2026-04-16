@@ -176,16 +176,38 @@ class PDFGenerator:
                 pdf.set_text_color(0, 51, 102)
                 pdf.cell(0, 15, "Market Visualizations", align='C', new_x="LMARGIN", new_y="NEXT")
                 pdf.ln(5)
+                
+                chart_titles = [
+                    "1. Top Neighborhood Rankings",
+                    "2. Detailed Neighborhood Breakdown",
+                    "3. Overall Market Distribution",
+                    "4. The 'Sweet Spot' Matrix (Income vs Competition)"
+                ]
+                
                 for i, fig in enumerate(figs):
+                    # Add a new page for each chart (clean layout)
+                    if i > 0:
+                        pdf.add_page()
+                    
+                    # Chart title
+                    title = chart_titles[i] if i < len(chart_titles) else f"Chart {i+1}"
+                    pdf.set_font("helvetica", "B", 13)
+                    pdf.set_text_color(0, 51, 102)
+                    pdf.cell(0, 10, title, new_x="LMARGIN", new_y="NEXT")
+                    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
+                    pdf.ln(4)
+                    
                     img_path = os.path.join(self.output_dir, f"temp_chart_{i}.png")
                     if self._write_image_with_timeout(fig, img_path):
-                        # Calculate available width (210 - 30 margin = 180)
                         pdf.image(img_path, x=15, w=180)
-                        pdf.ln(10)
+                        pdf.ln(8)
                         try: os.remove(img_path)
                         except: pass
-                    if i < len(figs) - 1 and pdf.get_y() > 180:
-                        pdf.add_page()
+                    else:
+                        pdf.set_font("helvetica", "I", 10)
+                        pdf.set_text_color(150, 100, 0)
+                        pdf.cell(0, 8, "[Chart could not be rendered]", new_x="LMARGIN", new_y="NEXT")
+                        pdf.set_text_color(0, 0, 0)
 
         # Footer
         pdf.set_y(-15)

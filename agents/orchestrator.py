@@ -125,6 +125,7 @@ ANALYSIS METADATA:
                 'csv': csv_path,
                 'report': report_path,
                 'charts': chart_paths,
+                'figures': charts,          # In-memory Plotly objects → used by PDF generator
                 'scored_data': scored_data  # Pass the raw data for UI tables
             },
             'iterations': self.iteration
