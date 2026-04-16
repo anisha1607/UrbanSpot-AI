@@ -35,27 +35,53 @@ class EDAAgent:
         
         filters = plan.get('filters', {})
         if filters.get('borough'):
-            print(f"Step 2: Applying borough filter: {filters['borough']}")
-            borough_col = self._find_borough_column(self.merged_data)
-            if borough_col:
-                # Normalize borough names in the data
-                self.merged_data[borough_col] = self.merged_data[borough_col].apply(
-                    self._normalize_borough_name
-                )
-                
-                # Normalize filter values
-                filter_boroughs = [self._normalize_borough_name(b) for b in filters['borough']]
-                
-                print(f"  Looking for: {filter_boroughs}")
-                print(f"  Available: {self.merged_data[borough_col].unique().tolist()[:10]}")
-                
-                # Apply filter
-                self.merged_data = self.merged_data[
-                    self.merged_data[borough_col].isin(filter_boroughs)
-                ]
-                print(f"  Filtered data shape: {self.merged_data.shape}")
+            borough_val = filters['borough']
+            
+            # Check if value is "ALL" or should skip filtering
+            if isinstance(borough_val, str) and borough_val.upper() in ['ALL', 'ANY', 'NONE', 'N/A', '', 'NULL']:
+                print(f"Step 2: Skipping borough filter (analyzing ALL boroughs)")
+                print(f"  Total neighborhoods: {len(self.merged_data)}")
             else:
-                print(f"  Warning: No borough column found, skipping filter")
+                # Apply borough filter
+                print(f"Step 2: Applying borough filter: {borough_val}")
+                borough_col = self._find_borough_column(self.merged_data)
+                
+                if borough_col:
+                    print(f"  Using column: '{borough_col}'")
+                    
+                    # Normalize borough names in the data
+                    self.merged_data[borough_col] = self.merged_data[borough_col].apply(
+                        self._normalize_borough_name
+                    )
+                    
+                    # Normalize filter values
+                    if isinstance(borough_val, list):
+                        filter_boroughs = [self._normalize_borough_name(b) for b in borough_val]
+                        print(f"  Looking for: {filter_boroughs}")
+                    else:
+                        filter_boroughs = [self._normalize_borough_name(borough_val)]
+                        print(f"  Looking for: {filter_boroughs}")
+                    
+                    print(f"  Available boroughs: {self.merged_data[borough_col].unique().tolist()[:10]}")
+                    
+                    # Apply filter
+                    original_count = len(self.merged_data)
+                    self.merged_data = self.merged_data[
+                        self.merged_data[borough_col].isin(filter_boroughs)
+                    ]
+                    filtered_count = len(self.merged_data)
+                    
+                    print(f"  Filtered: {original_count} → {filtered_count} neighborhoods")
+                    
+                    if filtered_count == 0:
+                        print(f"  ⚠️ WARNING: No neighborhoods found after filtering!")
+                        print(f"  Available unique values: {self.merged_data[borough_col].unique().tolist()}")
+                else:
+                    print(f"  ⚠️ Warning: No borough column found, skipping filter")
+                    print(f"  Available columns: {list(self.merged_data.columns)}")
+        else:
+            print(f"Step 2: No borough filter specified (analyzing ALL boroughs)")
+            print(f"  Total neighborhoods: {len(self.merged_data)}")
         
         print("Step 3: Computing scores...")
         self.scored_data = compute_scores(self.merged_data, weights)
@@ -64,27 +90,7 @@ class EDAAgent:
         print("Step 4: Generating summary statistics...")
         summary = summarize_results(self.scored_data, top_n=10)
         
-        print("Step 5: Conducting sensitivity analysis...")
-        sensitivity_results = {}
-        top_original = self.scored_data.iloc[0]['neighborhood'] if not self.scored_data.empty else None
-        
-        for weight_name, current_val in weights.items():
-            for variance in [0.1, -0.1]:
-                test_weights = weights.copy()
-                test_weights[weight_name] = max(0, min(1, current_val + variance))
-                test_scores = compute_scores(self.merged_data, test_weights)
-                
-                if not test_scores.empty:
-                    top_test = test_scores.iloc[0]['neighborhood']
-                    if top_test != top_original:
-                        sensitivity_results[f"{weight_name} {'+' if variance > 0 else '-'}{abs(variance)*100:.0f}%"] = f"Top location shifts to {top_test}"
-        
-        if not sensitivity_results:
-            sensitivity_results['robustness'] = "The top recommendation is robust to 10% weight variance."
-            
-        summary['sensitivity_analysis'] = sensitivity_results
-        
-        print("Step 6: Creating visualizations...")
+        print("Step 5: Creating visualizations...")
         self.charts = generate_charts(self.scored_data)
         print(f"  Generated {len(self.charts)} charts")
         
@@ -95,7 +101,8 @@ class EDAAgent:
         
         return {
             'summary': summary,
-            'top_neighborhoods': self.scored_data.head(10).to_dict('records'),
+            'scored_data': self.scored_data.to_dict('records'),  # ALL neighborhoods
+            'top_neighborhoods': self.scored_data.head(10).to_dict('records'),  # Top 10 for display
             'charts_generated': len(self.charts),
             'total_analyzed': len(self.scored_data)
         }

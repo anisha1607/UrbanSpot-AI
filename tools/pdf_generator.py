@@ -114,7 +114,7 @@ class PDFGenerator:
         pdf.set_font("helvetica", "B", 12)
         pdf.set_x(20)
         score_val = recs.get('score', 0)
-        pdf.cell(0, 8, f"Borough: {recs.get('borough', 'N/A')} | Opportunity Score: {score_val:.1f}/100", new_x="LMARGIN", new_y="NEXT")
+        pdf.cell(0, 8, f"Borough: {recs.get('borough', 'N/A')} | Opportunity Score: {min(100.0, score_val * 100):.1f}/100", new_x="LMARGIN", new_y="NEXT")
         pdf.ln(10)
 
         # Reasonings

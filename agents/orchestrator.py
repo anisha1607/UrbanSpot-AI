@@ -50,15 +50,25 @@ class BusinessLocationOrchestrator:
         eda_results, charts, scored_data = perform_eda(datasets, weights, plan)
         
         # Refinement loop
+        previous_feedback = None
+        
         while self.iteration < self.max_iterations:
             self.iteration += 1
             
             print("\n" + "="*50)
             print(f"HYPOTHESIS AGENT (Iteration {self.iteration})")
             print("="*50)
+            
+            # Pass previous critic feedback for improvement
+            if previous_feedback:
+                print(f"Using feedback from previous iteration:")
+                print(f"  Issues: {len(previous_feedback.get('issues', []))}")
+                print(f"  Suggestions: {len(previous_feedback.get('suggestions', []))}")
+            
             recommendation, explanation = generate_hypothesis(
                 eda_results,
-                plan['business_type']
+                plan['business_type'],
+                previous_critique=previous_feedback  # Pass the feedback!
             )
             print(f"Recommendation: {recommendation['best_location']}")
             
@@ -68,9 +78,12 @@ class BusinessLocationOrchestrator:
             feedback, formatted = critique_recommendation(
                 recommendation,
                 eda_results,
-                plan['business_type']
+                plan
             )
             print(f"{'Approved' if feedback['approved'] else 'Needs refinement'}")
+            
+            # Store feedback for next iteration
+            previous_feedback = feedback
             
             if feedback['approved'] or self.iteration >= self.max_iterations:
                 break
@@ -112,7 +125,7 @@ ANALYSIS METADATA:
                 'csv': csv_path,
                 'report': report_path,
                 'charts': chart_paths,
-                'figures': charts
+                'scored_data': scored_data  # Pass the raw data for UI tables
             },
             'iterations': self.iteration
         }

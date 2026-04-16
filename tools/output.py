@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from typing import List, Dict
+from typing import List, Dict,Any
 import os
 from datetime import datetime
 from tools.pdf_generator import generate_pdf_report
@@ -55,17 +55,24 @@ class OutputGenerator:
                 top_10,
                 x=neighborhood_col,
                 y='final_score',
-                title='Top 10 Neighborhoods by Score',
-                labels={'final_score': 'Score', neighborhood_col: 'Neighborhood'},
+                title='Neighborhood Suitability Rankings — Overall composite score for the top 10 candidate locations',
+                labels={'final_score': 'Suitability Score', neighborhood_col: 'Neighborhood'},
                 color='final_score',
                 color_continuous_scale='Viridis'
             )
             fig1.update_layout(
-                xaxis_tickangle=-45,
-                margin=dict(b=140),
-                font=dict(family="Inter, sans-serif")
+                xaxis_tickangle=-30,
+                margin=dict(b=180, l=80),
+                font=dict(family="Inter, sans-serif", size=13),
+                xaxis=dict(
+                    tickfont=dict(size=11),
+                    title=dict(text='Neighborhood', standoff=25)
+                ),
+                yaxis=dict(
+                    tickfont=dict(size=12),
+                    title=dict(text='Suitability Score', standoff=15)
+                )
             )
-            fig1.update_xaxes(tickfont=dict(size=12))
             figures.append(fig1)
         
         metric_cols = ['competition_count', 'median_income', 'median_rent', 'population']
@@ -87,10 +94,21 @@ class OutputGenerator:
                 ))
             
             fig2.update_layout(
-                title='Normalized Metrics Comparison',
+                title='Multi-Metric Comparison — Normalized side-by-side view of competition, income, rent & population',
                 xaxis_title='Neighborhood',
                 yaxis_title='Normalized Value (0-1)',
-                xaxis_tickangle=-45
+                xaxis_tickangle=-30,
+                margin=dict(b=180, l=80, r=160),
+                font=dict(family="Inter, sans-serif", size=13),
+                xaxis=dict(
+                    tickfont=dict(size=11),
+                    title=dict(text='Neighborhood', standoff=25)
+                ),
+                yaxis=dict(
+                    tickfont=dict(size=12),
+                    title=dict(text='Normalized Value (0-1)', standoff=15)
+                ),
+                legend=dict(font=dict(size=11))
             )
             
             figures.append(fig2)
@@ -100,8 +118,12 @@ class OutputGenerator:
                 df,
                 x='final_score',
                 nbins=30,
-                title='Score Distribution',
-                labels={'final_score': 'Final Score'}
+                title='Score Distribution — How all analyzed neighborhoods are spread across score ranges',
+                labels={'final_score': 'Final Score', 'count': 'Number of Neighborhoods'}
+            )
+            fig3.update_layout(
+                font=dict(family="Inter, sans-serif", size=13),
+                margin=dict(b=80, l=80)
             )
             figures.append(fig3)
         
@@ -120,12 +142,16 @@ class OutputGenerator:
                 size='final_score',
                 color='final_score',
                 hover_data=hover_data_dict if hover_data_dict else None,
-                title='Income vs Competition (Top 20)',
+                title='Income vs Competition Matrix — Sweet-spot analysis mapping wealth against market saturation',
                 labels={
-                    'median_income': 'Median Income ($)',
-                    'competition_count': 'Competition Count'
+                    'median_income': 'Median Household Income ($)',
+                    'competition_count': 'Number of Competitors'
                 },
                 color_continuous_scale='RdYlGn'
+            )
+            fig4.update_layout(
+                font=dict(family="Inter, sans-serif", size=13),
+                margin=dict(b=80, l=80)
             )
             figures.append(fig4)
         

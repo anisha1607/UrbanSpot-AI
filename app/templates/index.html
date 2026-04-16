@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NYC Business Location Advisor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #ffffff;
+            color: #111827;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        /* Header */
+        header {
+            background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%);
+            padding: 2rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            color: white;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 2rem;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            height: fit-content;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: #1e293b;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 0.5rem;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: border 0.2s;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #1e40af;
+        }
+        
+        /* Borough Checkboxes */
+        .borough-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .checkbox-item {
+            position: relative;
+        }
+        
+        .checkbox-item input {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .checkbox-item label {
+            display: block;
+            padding: 0.75rem;
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .checkbox-item input:checked + label {
+            background: #1e40af;
+            border-color: #1e40af;
+            color: white;
+        }
+        
+        /* Importance Levels */
+        .importance-group {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .importance-group:last-child {
+            border-bottom: none;
+        }
+        
+        .importance-header {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .importance-icon {
+            font-size: 1.25rem;
+        }
+        
+        .importance-label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .importance-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.5rem;
+        }
+        
+        .importance-option {
+            position: relative;
+        }
+        
+        .importance-option input {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .importance-option span {
+            display: block;
+            padding: 0.5rem;
+            background: #f1f5f9;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .importance-option input:checked + span {
+            background: #1e40af;
+            border-color: #1e40af;
+            color: white;
+        }
+        
+        /* Weight Total Warning */
+        .weight-total {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+        
+        .weight-total.valid {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .weight-total.invalid {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(30, 64, 175, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            padding: 0.75rem 1.5rem;
+            background: white;
+            color: #1e40af;
+            border: 2px solid #1e40af;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #1e40af;
+            color: white;
+        }
+        
+        /* Results Panel */
+        .results-panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #1e40af;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Recommendation Card */
+        .recommendation-card {
+            padding: 2.5rem;
+        }
+        
+        .rec-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .rec-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .rec-borough {
+            font-size: 1.1rem;
+            color: #64748b;
+        }
+        
+        /* Score Card */
+        .score-card {
+            background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%);
+            padding: 1.5rem;
+            border-radius: 12px;
+            color: white;
+            min-width: 200px;
+            text-align: center;
+        }
+        
+        .score-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+        
+        .score-value {
+            font-size: 3rem;
+            font-weight: 700;
+            line-height: 1;
+        }
+        
+        .score-suffix {
+            font-size: 1.5rem;
+            opacity: 0.8;
+        }
+        
+        /* Market Viability Badge */
+        .viability-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.25rem;
+            border-radius: 24px;
+            font-weight: 600;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .viability-badge.high {
+            background: #d1fae5;
+            color: #065f46;
+            border: 2px solid #059669;
+        }
+        
+        .viability-badge.medium {
+            background: #fef3c7;
+            color: #92400e;
+            border: 2px solid #d97706;
+        }
+        
+        .viability-badge.low {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #dc2626;
+        }
+        
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        
+        .metric-card {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .metric-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        /* Analysis Section */
+        .analysis-section {
+            margin-bottom: 2rem;
+        }
+        
+        .analysis-section h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #1e293b;
+        }
+        
+        .analysis-text {
+            color: #475569;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 2rem;
+        }
+        
+        .tab {
+            padding: 1rem 2rem;
+            font-weight: 600;
+            color: #64748b;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        
+        .tab.active {
+            color: #1e40af;
+            border-bottom-color: #1e40af;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Charts */
+        .chart-container {
+            margin-bottom: 3rem;
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .chart-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: #111827;
+        }
+        
+        .chart-description {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Score Explanation */
+        .score-explanation {
+            background: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 4px solid #1e40af;
+            margin-top: 2rem;
+        }
+        
+        .score-explanation h4 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.75rem;
+            color: #1e293b;
+        }
+        
+        .score-explanation p {
+            color: #475569;
+            line-height: 1.8;
+            margin-bottom: 0.5rem;
+        }
+        
+        /* Email Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2.5rem;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .modal-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+        }
+        
+        .modal-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        
+        .modal-actions button {
+            flex: 1;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                position: relative;
+                top: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Landing Page / How It Works -->
+        <div id="landingPage" style="display: block;">
+            <header>
+                <h1>NYC Business Location Advisor</h1>
+                <p class="subtitle">AI-Powered Multi-Agent System for Optimal Business Placement</p>
+            </header>
+
+            <div style="background: white; border-radius: 12px; padding: 3rem; margin-top: 2rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <h2 style="font-size: 2rem; font-weight: 700; margin-bottom: 2rem; text-align: center;">How It Works</h2>
+                
+                <p style="font-size: 1.1rem; color: #475569; margin-bottom: 2rem; text-align: center; max-width: 800px; margin-left: auto; margin-right: auto;">
+                    This system uses a multi-agent architecture to analyze NYC data and recommend optimal business locations:
+                </p>
+
+                <div style="display: grid; gap: 1.5rem; max-width: 900px; margin: 0 auto 3rem;">
+                    <div style="display: flex; gap: 1rem; align-items: start;">
+                        <div style="background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">1</div>
+                        <div>
+                            <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Planner Agent:</strong>
+                            <span style="color: #64748b;">Interprets your input and creates an analysis plan</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: start;">
+                        <div style="background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">2</div>
+                        <div>
+                            <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Data Collector Agent:</strong>
+                            <span style="color: #64748b;">Fetches real-time data from NYC Open Data, Census, and MTA APIs</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: start;">
+                        <div style="background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">3</div>
+                        <div>
+                            <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">EDA Agent:</strong>
+                            <span style="color: #64748b;">Performs exploratory analysis, computes scores, and generates visualizations</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: start;">
+                        <div style="background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">4</div>
+                        <div>
+                            <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Hypothesis Agent:</strong>
+                            <span style="color: #64748b;">Produces data-backed recommendations with evidence</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 1rem; align-items: start;">
+                        <div style="background: linear-gradient(135deg, #1e40af 0%, #0369a1 100%); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0;">5</div>
+                        <div>
+                            <strong style="display: block; font-size: 1.1rem; margin-bottom: 0.25rem;">Critic Agent:</strong>
+                            <span style="color: #64748b;">Reviews the recommendation and suggests refinements</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; padding: 2rem; border-radius: 12px; margin-bottom: 3rem;">
+                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 1rem;">The system analyzes:</h3>
+                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #3b82f6;">🏪</span>
+                            <span style="color: #475569;"><strong>Competition:</strong> Number of existing businesses</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #3b82f6;">💰</span>
+                            <span style="color: #475569;"><strong>Income:</strong> Median household income</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #3b82f6;">👥</span>
+                            <span style="color: #475569;"><strong>Population:</strong> Demand proxy</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #3b82f6;">🚇</span>
+                            <span style="color: #475569;"><strong>Foot Traffic:</strong> Subway ridership data</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <span style="color: #3b82f6;">💸</span>
+                            <span style="color: #475569;"><strong>Rent:</strong> Cost indicators</span>
+                        </div>
+                    </div>
+                </div>
+
+                <p style="text-align: center; color: #64748b; font-style: italic; margin-bottom: 2rem;">
+                    All data is retrieved at runtime - no hardcoded datasets!
+                </p>
+
+                <div style="text-align: center;">
+                    <button id="getStartedBtn" class="btn-primary" style="max-width: 300px; margin: 0 auto;">
+                        Get Started
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main App (Hidden Initially) -->
+        <div id="mainApp" style="display: none;">
+        <header>
+            <h1>NYC Business Location Advisor</h1>
+            <p class="subtitle">AI-Powered Multi-Agent System for Optimal Business Placement</p>
+        </header>
+
+        <div class="main-grid">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <h2 class="section-title">Business Configuration</h2>
+
+                <form id="analysisForm">
+                    <div class="form-group">
+                        <label for="businessType">Business Type</label>
+                        <select id="businessType" required>
+                            <option value="coffee_shop">Coffee Shop</option>
+                            <option value="restaurant">Restaurant</option>
+                            <option value="retail">Retail Store</option>
+                            <option value="gym">Fitness Center</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Borough Filter</label>
+                        <div class="borough-grid">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="manhattan" value="Manhattan" checked>
+                                <label for="manhattan">Manhattan</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="brooklyn" value="Brooklyn" checked>
+                                <label for="brooklyn">Brooklyn</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="queens" value="Queens" checked>
+                                <label for="queens">Queens</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="bronx" value="Bronx" checked>
+                                <label for="bronx">Bronx</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="statenisland" value="Staten Island">
+                                <label for="statenisland">Staten Island</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Scoring Weights</label>
+                        <p style="font-size: 0.875rem; color: #64748b; margin-bottom: 1rem;">
+                            Adjust the importance of each factor. <strong>Total must equal 1.0</strong>
+                        </p>
+                        
+                        <!-- Demand -->
+                        <div class="importance-group">
+                            <div class="importance-header">
+                                
+                                <span class="importance-label">Customer Demand</span>
+                            </div>
+                            <div class="importance-options">
+                                <label class="importance-option">
+                                    <input type="radio" name="demand" value="0.10">
+                                    <span>0.10</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="demand" value="0.20" checked>
+                                    <span>0.20</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="demand" value="0.30">
+                                    <span>0.30</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="demand" value="0.40">
+                                    <span>0.40</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Foot Traffic -->
+                        <div class="importance-group">
+                            <div class="importance-header">
+                                
+                                <span class="importance-label">Foot Traffic</span>
+                            </div>
+                            <div class="importance-options">
+                                <label class="importance-option">
+                                    <input type="radio" name="traffic" value="0.10">
+                                    <span>0.10</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="traffic" value="0.20" checked>
+                                    <span>0.20</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="traffic" value="0.30">
+                                    <span>0.30</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="traffic" value="0.40">
+                                    <span>0.40</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Income -->
+                        <div class="importance-group">
+                            <div class="importance-header">
+                                
+                                <span class="importance-label">Customer Income</span>
+                            </div>
+                            <div class="importance-options">
+                                <label class="importance-option">
+                                    <input type="radio" name="income" value="0.10">
+                                    <span>0.10</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="income" value="0.20" checked>
+                                    <span>0.20</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="income" value="0.30">
+                                    <span>0.30</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="income" value="0.40">
+                                    <span>0.40</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Competition -->
+                        <div class="importance-group">
+                            <div class="importance-header">
+                                
+                                <span class="importance-label">Low Competition</span>
+                            </div>
+                            <div class="importance-options">
+                                <label class="importance-option">
+                                    <input type="radio" name="competition" value="0.10">
+                                    <span>0.10</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="competition" value="0.20" checked>
+                                    <span>0.20</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="competition" value="0.30">
+                                    <span>0.30</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="competition" value="0.40">
+                                    <span>0.40</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Rent -->
+                        <div class="importance-group">
+                            <div class="importance-header">
+                                
+                                <span class="importance-label">Affordable Rent</span>
+                            </div>
+                            <div class="importance-options">
+                                <label class="importance-option">
+                                    <input type="radio" name="rent" value="0.10">
+                                    <span>0.10</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="rent" value="0.20" checked>
+                                    <span>0.20</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="rent" value="0.30">
+                                    <span>0.30</span>
+                                </label>
+                                <label class="importance-option">
+                                    <input type="radio" name="rent" value="0.40">
+                                    <span>0.40</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="weightTotal" class="weight-total valid">
+                        ✓ Total weight: 1.00
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="analyzeBtn">
+                        Run Analysis
+                    </button>
+                </form>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="results-panel">
+                <div id="loadingState" class="loading">
+                    <div class="spinner"></div>
+                    <p style="color: #64748b; font-size: 1.1rem; font-weight: 600;">Analyzing NYC neighborhoods...</p>
+                    <p style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.5rem;">
+                        Running multi-agent analysis (60-90 seconds)
+                    </p>
+                </div>
+
+                <div id="resultsContainer" style="display: none;">
+                    <div class="recommendation-card">
+                        <div class="rec-header">
+                            <div>
+                                <div style="font-size: 0.875rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                                    Best Location
+                                </div>
+                                <h2 class="rec-title" id="locationName">—</h2>
+                                <p class="rec-borough" id="boroughName">—</p>
+                                <div class="viability-badge" id="viabilityBadge">
+                                    <span id="viabilityIcon"></span>
+                                    <span id="viabilityText">Optimal Market</span>
+                                </div>
+                                <p id="viabilityReason" style="margin-top: 1rem; color: #64748b; font-size: 0.9rem; font-style: italic;">—</p>
+                            </div>
+                            <div class="score-card">
+                                <div class="score-label">Overall Match Suitability</div>
+                                <div class="score-value">
+                                    <span id="scoreValue">—</span>
+                                    <span class="score-suffix">/100</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-label">Borough</div>
+                                <div class="metric-value" id="metricBorough">—</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Iterations</div>
+                                <div class="metric-value" id="metricIterations">—</div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Analyzed</div>
+                                <div class="metric-value">165</div>
+                            </div>
+                        </div>
+
+                        <!-- Tabs -->
+                        <div class="tabs">
+                            <div class="tab active" data-tab="overview">Recommendation</div>
+                            <div class="tab" data-tab="visualizations">Visualizations</div>
+                            <div class="tab" data-tab="critic">Critic Feedback</div>
+                            <div class="tab" data-tab="artifacts">Artifacts</div>
+                        </div>
+
+                        <!-- Overview Tab -->
+                        <div id="overview" class="tab-content active">
+                            <div class="analysis-section">
+                                <h3>Why This Location</h3>
+                                <div class="analysis-text" id="reasoningText">—</div>
+                            </div>
+
+                            <div class="analysis-section">
+                                <h3>Trade-offs to Consider</h3>
+                                <div class="analysis-text" id="tradeoffsText">—</div>
+                            </div>
+
+                            <div class="analysis-section">
+                                <h3>Top Alternatives</h3>
+                                <div class="analysis-text" id="alternativesText">—</div>
+                            </div>
+
+                            <div class="score-explanation">
+                                <h4>How did we calculate these scores?</h4>
+                                <p id="scoreCalculationText">—</p>
+                            </div>
+
+                            <div class="action-buttons">
+                                <button class="btn-secondary" id="emailBtn">
+                                    Email Report
+                                </button>
+                                <button class="btn-secondary" id="downloadBtn">
+                                    Download CSV
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Visualizations Tab -->
+                        <div id="visualizations" class="tab-content">
+                            <div id="chartsContainer"></div>
+                        </div>
+
+                        <!-- Critic Tab -->
+                        <div id="critic" class="tab-content">
+                            <div class="analysis-section">
+                                <h3>Critic Agent Analysis</h3>
+                                <div class="analysis-text" id="criticText">—</div>
+                            </div>
+                        </div>
+
+                        <!-- Artifacts Tab -->
+                        <div id="artifacts" class="tab-content">
+                            <div class="analysis-section">
+                                <h3>Generated Artifacts</h3>
+                                <p style="color: #64748b; margin-bottom: 1rem;">
+                                    Download the full analysis report and data files.
+                                </p>
+                                <div style="display: flex; gap: 1rem;">
+                                    <button class="btn-secondary" id="downloadCsvBtn">
+                                        Download Scores CSV
+                                    </button>
+                                    <button class="btn-secondary" id="emailReportBtn">
+                                        Email Full Report
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        </div> <!-- End mainApp -->
+    </div>
+
+    <!-- Email Modal -->
+    <div id="emailModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Email Report</h3>
+            <div class="form-group">
+                <label for="emailInput">Email Address</label>
+                <input type="email" id="emailInput" placeholder="your@email.com" required>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-secondary" id="cancelEmail">Cancel</button>
+                <button class="btn-primary" id="sendEmail" style="width: auto;">Send Report</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Landing page fade transition
+        document.getElementById('getStartedBtn').addEventListener('click', () => {
+            const landing = document.getElementById('landingPage');
+            const main = document.getElementById('mainApp');
+            
+            // Fade out landing page
+            landing.style.transition = 'opacity 0.5s ease-out';
+            landing.style.opacity = '0';
+            
+            setTimeout(() => {
+                landing.style.display = 'none';
+                main.style.display = 'block';
+                main.style.opacity = '0';
+                main.style.transition = 'opacity 0.5s ease-in';
+                
+                setTimeout(() => {
+                    main.style.opacity = '1';
+                }, 50);
+            }, 500);
+        });
+
+        // State
+        let currentAnalysisId = null;
+        let currentResult = null;
+
+        // Weight validation
+        function updateWeightTotal() {
+            const getSelectedValue = (name) => {
+                const selected = document.querySelector(`input[name="${name}"]:checked`);
+                return selected ? parseFloat(selected.value) : 0;
+            };
+
+            const total = getSelectedValue('demand') + 
+                         getSelectedValue('traffic') + 
+                         getSelectedValue('income') + 
+                         getSelectedValue('competition') + 
+                         getSelectedValue('rent');
+
+            const totalEl = document.getElementById('weightTotal');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+
+            if (Math.abs(total - 1.0) < 0.01) {
+                totalEl.className = 'weight-total valid';
+                totalEl.textContent = `✓ Total weight: ${total.toFixed(2)}`;
+                analyzeBtn.disabled = false;
+            } else {
+                totalEl.className = 'weight-total invalid';
+                totalEl.textContent = `✗ Total weight: ${total.toFixed(2)} (must equal 1.0)`;
+                analyzeBtn.disabled = true;
+            }
+        }
+
+        // Listen for weight changes
+        document.querySelectorAll('input[type="radio"]').forEach(input => {
+            input.addEventListener('change', updateWeightTotal);
+        });
+
+        // Initial validation
+        updateWeightTotal();
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+
+        // Form submission
+        document.getElementById('analysisForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const boroughs = [];
+            document.querySelectorAll('.checkbox-item input:checked').forEach(checkbox => {
+                boroughs.push(checkbox.value);
+            });
+
+            if (boroughs.length === 0) {
+                alert('Please select at least one borough');
+                return;
+            }
+
+            const getSelectedValue = (name) => {
+                const selected = document.querySelector(`input[name="${name}"]:checked`);
+                return selected ? parseFloat(selected.value) : 0.15;
+            };
+
+            const weights = {
+                demand: getSelectedValue('demand'),
+                foot_traffic: getSelectedValue('traffic'),
+                income: getSelectedValue('income'),
+                competition: getSelectedValue('competition'),
+                rent: getSelectedValue('rent')
+            };
+
+            document.getElementById('loadingState').classList.add('active');
+            document.getElementById('resultsContainer').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        business_type: document.getElementById('businessType').value,
+                        borough_filter: boroughs,
+                        weights: weights
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    currentAnalysisId = data.analysis_id;
+                    currentResult = data;
+                    displayResults(data);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Analysis error:', error);
+                alert('Failed to run analysis. Please try again.');
+            } finally {
+                document.getElementById('loadingState').classList.remove('active');
+            }
+        });
+
+        // Display results
+        function displayResults(data) {
+            const rec = data.recommendation;
+            
+            // Convert score to 0-100 scale with proper formatting
+            const scoreOut100 = Math.round(rec.score * 100 * 10) / 10; // e.g., 0.5074 -> 50.7
+            
+            document.getElementById('locationName').textContent = rec.best_location || 'N/A';
+            document.getElementById('boroughName').textContent = rec.borough || '';
+            document.getElementById('metricBorough').textContent = (rec.borough || 'N/A').toUpperCase();
+            document.getElementById('scoreValue').textContent = scoreOut100;
+            document.getElementById('metricIterations').textContent = data.iterations || '0';
+
+            // Market viability badge
+            const viabilityBadge = document.getElementById('viabilityBadge');
+            const viabilityText = document.getElementById('viabilityText');
+            const viabilityReason = document.getElementById('viabilityReason');
+            const score = scoreOut100;
+            
+            if (score >= 70) {
+                viabilityBadge.className = 'viability-badge high';
+                viabilityText.textContent = 'Optimal Market';
+                viabilityReason.textContent = 'This location scores in the top tier (70+/100), indicating strong market potential with favorable conditions across multiple factors.';
+            } else if (score >= 50) {
+                viabilityBadge.className = 'viability-badge medium';
+                viabilityText.textContent = 'Favorable Fit';
+                viabilityReason.textContent = 'This is essentially a photo finish - all three top locations are within 1 point of each other, and small changes in market conditions could easily flip the rankings.';
+            } else {
+                viabilityBadge.className = 'viability-badge low';
+                viabilityText.textContent = 'Requires Caution';
+                viabilityReason.textContent = 'This location scores below 50/100, suggesting significant challenges or trade-offs. Review the detailed analysis carefully before proceeding.';
+            }
+
+            // Reasoning
+            const reasoning = Array.isArray(rec.reasoning) ? 
+                rec.reasoning.map((r, i) => `${i + 1}. ${r}`).join('\n\n') : 
+                (rec.reasoning || 'No reasoning provided');
+            document.getElementById('reasoningText').textContent = reasoning;
+
+            // Trade-offs
+            const tradeoffs = Array.isArray(rec.trade_offs) ? 
+                rec.trade_offs.map((t, i) => `${i + 1}. ${t}`).join('\n\n') : 
+                (rec.trade_offs || 'No trade-offs identified');
+            document.getElementById('tradeoffsText').textContent = tradeoffs;
+
+            // Alternatives - handle both array of strings and array of objects
+            let alternativesText = '';
+            if (Array.isArray(rec.top_alternatives)) {
+                alternativesText = rec.top_alternatives.map((alt, i) => {
+                    if (typeof alt === 'string') {
+                        return `${i + 1}. ${alt}`;
+                    } else if (typeof alt === 'object' && alt !== null) {
+                        // Handle object format: {location: "Brooklyn - 11208", score: 50.6, reason: "..."}
+                        const location = alt.location || alt.name || 'Unknown';
+                        const altScore = alt.score ? ` (Score: ${(alt.score * 100).toFixed(1)})` : '';
+                        const reason = alt.reason ? ` - ${alt.reason}` : '';
+                        return `${i + 1}. ${location}${altScore}${reason}`;
+                    }
+                    return `${i + 1}. N/A`;
+                }).join('\n\n');
+            } else {
+                alternativesText = 'No alternatives provided';
+            }
+            
+            // Add key insight if available
+            if (rec.key_insights && rec.key_insights.trim()) {
+                alternativesText += `\n\nKEY INSIGHT: ${rec.key_insights}`;
+            }
+            
+            document.getElementById('alternativesText').textContent = alternativesText;
+
+            // Score calculation explanation
+            const scoreExplanation = `You might be wondering how perfect a neighborhood can truly be in NYC. Our algorithm calculates a mathematical baseline considering thousands of zip codes! Because cities naturally have heavy trade-offs (e.g. extremely high foot traffic always correlates with intense rent and heavy competition bounds), it is physically impossible for any real neighborhood to achieve the original 'perfect algorithmic peak'. Instead, we dynamically scale our suitability metric out of 100 relative to the most profitable real-world opportunity we identified for you. This ensures the top recommendations are truly the best available, even with built-in financial trade-offs!`;
+            
+            document.getElementById('scoreCalculationText').textContent = scoreExplanation;
+
+            // Critic feedback
+            const critic = data.critic_feedback;
+            const criticText = [
+                critic.issues ? `Issues:\n${critic.issues.join('\n')}` : '',
+                critic.suggestions ? `\n\nSuggestions:\n${critic.suggestions.join('\n')}` : '',
+                critic.missing_considerations ? `\n\nMissing Considerations:\n${critic.missing_considerations.join('\n')}` : '',
+                critic.alternative_perspective ? `\n\nAlternative Perspective:\n${critic.alternative_perspective}` : ''
+            ].filter(Boolean).join('\n') || 'No feedback available';
+            
+            document.getElementById('criticText').textContent = criticText;
+
+            // Render charts
+            const chartsContainer = document.getElementById('chartsContainer');
+            chartsContainer.innerHTML = '';
+            
+            if (data.charts && data.charts.length > 0) {
+                console.log(`Rendering ${data.charts.length} charts...`);
+                
+                data.charts.forEach((chartJson, index) => {
+                    const chartWrapper = document.createElement('div');
+                    chartWrapper.className = 'chart-container';
+                    
+                    const chartDiv = document.createElement('div');
+                    chartDiv.id = `chart-${index}`;
+                    
+                    try {
+                        let chartData;
+                        
+                        // Parse JSON if it's a string
+                        if (typeof chartJson === 'string') {
+                            chartData = JSON.parse(chartJson);
+                        } else {
+                            chartData = chartJson;
+                        }
+                        
+                        console.log(`Chart ${index + 1}:`, {
+                            hasData: !!chartData.data,
+                            hasLayout: !!chartData.layout,
+                            dataLength: chartData.data?.length,
+                            title: chartData.layout?.title?.text || chartData.layout?.title
+                        });
+                        
+                        // Extract title if it exists
+                        let chartTitle = '';
+                        if (chartData.layout?.title) {
+                            if (typeof chartData.layout.title === 'string') {
+                                chartTitle = chartData.layout.title;
+                            } else if (chartData.layout.title.text) {
+                                chartTitle = chartData.layout.title.text;
+                            }
+                        }
+                        
+                        // Add title if available
+                        if (chartTitle) {
+                            const titleEl = document.createElement('h3');
+                            titleEl.className = 'chart-title';
+                            titleEl.textContent = `${index + 1}. ${chartTitle}`;
+                            chartWrapper.appendChild(titleEl);
+                        }
+                        
+                        chartWrapper.appendChild(chartDiv);
+                        chartsContainer.appendChild(chartWrapper);
+                        
+                        // Ensure layout exists
+                        if (!chartData.layout) {
+                            chartData.layout = {};
+                        }
+                        
+                        // Make layout responsive and clean
+                        chartData.layout = {
+                            ...chartData.layout,
+                            autosize: true,
+                            height: 500,
+                            margin: { l: 80, r: 40, t: 40, b: 100 },
+                            paper_bgcolor: '#ffffff',
+                            plot_bgcolor: '#f9fafb',
+                            font: {
+                                family: 'Inter, sans-serif',
+                                size: 12,
+                                color: '#374151'
+                            },
+                            showlegend: true,
+                            legend: {
+                                orientation: 'h',
+                                yanchor: 'bottom',
+                                y: -0.3,
+                                xanchor: 'center',
+                                x: 0.5
+                            },
+                            // Remove title from plot since we display it above
+                            title: ''
+                        };
+                        
+                        // Ensure data points are visible
+                        if (chartData.data) {
+                            chartData.data = chartData.data.map(trace => ({
+                                ...trace,
+                                marker: {
+                                    ...trace.marker,
+                                    size: trace.marker?.size || 8,
+                                    line: {
+                                        width: 1,
+                                        color: '#ffffff'
+                                    }
+                                }
+                            }));
+                        }
+                        
+                        // Config for better interactivity
+                        const config = {
+                            responsive: true,
+                            displayModeBar: true,
+                            displaylogo: false,
+                            modeBarButtonsToRemove: ['lasso2d', 'select2d', 'pan2d', 'autoScale2d'],
+                            toImageButtonOptions: {
+                                format: 'png',
+                                filename: `urbanspot_chart_${index + 1}`,
+                                height: 600,
+                                width: 1000,
+                                scale: 2
+                            }
+                        };
+                        
+                        // Render the chart
+                        Plotly.newPlot(chartDiv.id, chartData.data, chartData.layout, config);
+                        console.log(`✅ Chart ${index + 1} rendered successfully`);
+                        
+                    } catch (error) {
+                        console.error(`Chart ${index + 1} rendering error:`, error);
+                        chartWrapper.innerHTML = `
+                            <div style="padding: 2rem; text-align: center; color: #64748b; background: #f9fafb; border-radius: 8px;">
+                                <p style="font-weight: 600; margin-bottom: 0.5rem;">Chart ${index + 1} could not be rendered</p>
+                                <p style="font-size: 0.875rem; color: #dc2626;">${error.message}</p>
+                            </div>
+                        `;
+                        chartsContainer.appendChild(chartWrapper);
+                    }
+                });
+            } else {
+                console.log('No charts available');
+                chartsContainer.innerHTML = `
+                    <div style="padding: 2rem; text-align: center; color: #64748b;">
+                        <p>No visualizations available for this analysis</p>
+                    </div>
+                `;
+            }
+
+            document.getElementById('resultsContainer').style.display = 'block';
+        }
+
+        // Email functionality
+        document.getElementById('emailBtn').addEventListener('click', () => {
+            document.getElementById('emailModal').classList.add('active');
+        });
+
+        document.getElementById('emailReportBtn').addEventListener('click', () => {
+            document.getElementById('emailModal').classList.add('active');
+        });
+
+        document.getElementById('cancelEmail').addEventListener('click', () => {
+            document.getElementById('emailModal').classList.remove('active');
+        });
+
+        document.getElementById('sendEmail').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            if (!email) {
+                alert('Please enter an email address');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/email-report', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        analysis_id: currentAnalysisId,
+                        email: email,
+                        include_charts: true
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Report sent successfully!');
+                    document.getElementById('emailModal').classList.remove('active');
+                    document.getElementById('emailInput').value = '';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Email error:', error);
+                alert('Failed to send email. Please try again.');
+            }
+        });
+
+        // Download CSV
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (currentAnalysisId) {
+                window.location.href = `/api/download-report/${currentAnalysisId}`;
+            }
+        });
+
+        document.getElementById('downloadCsvBtn').addEventListener('click', () => {
+            if (currentAnalysisId) {
+                window.location.href = `/api/download-report/${currentAnalysisId}`;
+            }
+        });
+
+        // Close modal on background click
+        document.getElementById('emailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'emailModal') {
+                document.getElementById('emailModal').classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>

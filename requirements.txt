@@ -1,5 +1,5 @@
-# Core AI - Direct Anthropic SDK (no LangChain needed)
-anthropic>=0.34.0
+# Core AI - Official Vertex AI Enterprise SDK
+google-cloud-aiplatform>=1.49.0
 
 # Data processing
 pandas>=2.2.0
@@ -25,4 +25,4 @@ pytest-asyncio>=0.21.0
 
 # PDF & Email Report
 fpdf2>=2.7.0
-kaleido==0.2.1
+kaleido==0.2.1

@@ -24,18 +24,29 @@ class DataCollectorAgent:
         data_sources = plan.get('data_sources', [])
         business_type = plan.get('business_type', 'general')
         
-        print(f"Collecting data from {len(data_sources)} sources...")
+        print(f"Collecting data from {len(data_sources)} sources for business type: {business_type}...")
         
-        if any(source in ['nyc_businesses', 'restaurants'] for source in data_sources):
-            print("Fetching NYC Open Data...")
+        # Fetch NYC business data (restaurants, retail, gyms, salons, etc.)
+        # The fetch_nyc_data function handles different business types dynamically
+        if any(source in ['nyc_businesses', 'restaurants', 'nyc_open_data', 'businesses'] for source in data_sources):
+            print(f"Fetching NYC Open Data for {business_type}...")
             try:
                 nyc_data = fetch_nyc_data(business_type)
                 datasets.update(nyc_data)
-                print(f"  - Businesses: {len(nyc_data.get('businesses', pd.DataFrame()))} records")
-                print(f"  - Restaurants: {len(nyc_data.get('restaurants', pd.DataFrame()))} records")
+                
+                # Show what was fetched dynamically
+                for key, df in nyc_data.items():
+                    if not df.empty:
+                        print(f"  - {key.capitalize()}: {len(df)} records")
+                    
             except Exception as e:
                 print(f"  - Error fetching NYC data: {e}")
+                # Add empty dataframes as fallback
+                datasets['businesses'] = pd.DataFrame()
+                if business_type in ['restaurant', 'coffee_shop', 'cafe']:
+                    datasets['restaurants'] = pd.DataFrame()
         
+        # Fetch Census data (population, income, rent by zip code)
         if 'census' in data_sources:
             print("Fetching Census data...")
             try:
@@ -46,6 +57,7 @@ class DataCollectorAgent:
                 print(f"  - Error fetching Census data: {e}")
                 datasets['census'] = pd.DataFrame()
         
+        # Fetch MTA data (subway ridership for foot traffic proxy)
         if 'mta' in data_sources:
             print("Fetching MTA data...")
             try:
@@ -57,6 +69,8 @@ class DataCollectorAgent:
                 datasets['mta'] = pd.DataFrame()
         
         self.collected_data = datasets
+        
+        print(f"\n✓ Data collection complete: {len(datasets)} datasets")
         return datasets
     
     def normalize_datasets(self, datasets: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
@@ -72,8 +86,10 @@ class DataCollectorAgent:
             
             clean_df = df.copy()
             
+            # Normalize column names
             clean_df.columns = clean_df.columns.str.lower().str.strip()
             
+            # Clean string columns
             for col in clean_df.columns:
                 if clean_df[col].dtype == 'object':
                     clean_df[col] = clean_df[col].str.strip()

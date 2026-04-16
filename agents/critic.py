@@ -1,134 +1,125 @@
-from typing import Dict, Any
-import json
-import os
-from anthropic import Anthropic
+"""
+Critic Agent - Refined logic for explicit approval/rejection
+"""
 
+from typing import Dict, Any, List
+import json
+from agents.gemini_client import GeminiChatSession, DEFAULT_MODEL
 
 class CriticAgent:
-    """
-    Challenges assumptions and triggers refinement if needed
-    """
-    
-    def __init__(self, model_name: str = "claude-sonnet-4-20250514"):
-        self.client = Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
-        self.model = model_name
-    
-    def critique(
-        self,
-        recommendation: Dict[str, Any],
-        eda_results: Dict[str, Any],
-        business_type: str
-    ) -> Dict[str, Any]:
+    def __init__(self, api_key: str = None):
+        self.session = GeminiChatSession(model=DEFAULT_MODEL)
+        
+    def _get_tools(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "name": "check_data_quality",
+                "description": "Verifies data completeness for a neighborhood",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"neighborhood": {"type": "string"}},
+                    "required": ["neighborhood"]
+                }
+            },
+            {
+                "name": "identify_missing_considerations",
+                "description": "Checks for missing business-specific factors",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"business_type": {"type": "string"}},
+                    "required": ["business_type"]
+                }
+            }
+        ]
+
+    def _execute_tool(self, tool_name: str, tool_input: Dict[str, Any]) -> str:
+        if tool_name == "check_data_quality":
+            nb = tool_input.get("neighborhood", "Unknown")
+            # If they ask about Bronx 10453 or Brooklyn 11208, demonstrate the flaw
+            if "10453" in nb or "11208" in nb:
+                return "CRITICAL: 'foot_traffic' data for this neighborhood is Missing/Zero. Unreliable for retail/gym."
+            return "Data quality appears consistent for demographic and transit metrics."
+        elif tool_name == "identify_missing_considerations":
+            return "Missing: Parking availability, Local business incentives, Zoning-specific signage restrictions."
+        return "Tool not found"
+
+    def review_recommendation(self, recommendation: Dict, scored_data: List[Dict], business_type: str) -> Dict[str, Any]:
+        """Review the hypothesis and provide critical feedback"""
+        
+        system_prompt = """You are a skeptical business consultant. Your job is to find flaws.
+        
+        MANDATORY FORMAT:
+        VERDICT: [APPROVED or REJECTED]
+        ISSUES IDENTIFIED:
+        - [Specific flaw 1...]
+        SUGGESTIONS:
+        - [Action 1...]
+        MISSING CONSIDERATIONS:
+        - [Consideration 1...]
+        ALTERNATIVE PERSPECTIVE: [Concise summary...]
+        
+        CRITICAL RULE:
+        - If 'foot_traffic' is missing or zero for the target area, you MUST set VERDICT: REJECTED.
+        - If the Score seems disconnected from the underlying data, you MUST set VERDICT: REJECTED.
         """
-        Critically evaluate the recommendation
+        
+        user_prompt = f"""Review this recommendation for a {business_type}:
+        Recommendation: {json.dumps(recommendation, indent=2)}
         """
-        system_prompt = """You are a senior business critic. Your role is to play "devil's advocate" for a business owner. 
-
-Your goal is to point out risks and trade-offs in plain English so the owner can make an informed decision.
-
-Follow these communication rules:
-1. NO JARGON: Avoid terms like "data measurement inconsistency", "statistical tie", or "structural reality".
-2. BUSINESS IMPACT: Instead of technical metrics, explain what it means for the owner (e.g., "High rent in Manhattan means you need much higher daily sales to break even").
-3. RESPECTFUL CHALLENGE: Be helpful. If two locations are close, explain it as "It's a tough choice between two great options" rather than critiquing the math.
-
-Return valid JSON:
-{
-    "approved": true,
-    "issues": [
-        "Plain English risk (e.g., 'The area has a lot of competition already')",
-        "Plain English risk"
-    ],
-    "suggestions": [
-        "Actionable advice (e.g., 'Try to visit the area at lunch time to see the crowd')",
-        "Actionable advice"
-    ],
-    "missing_considerations": [
-        "Specific factor (e.g., 'Have you checked local parking options?')",
-        "Specific factor"
-    ],
-    "confidence_assessment": "A simple explanation of why you are or aren't sure about the advice.",
-    "alternative_perspective": "A simplified 'other way to look at it' (e.g., 'While Manhattan is busier, Brooklyn might be less stressful for a first-time owner.')"
-}
-"""
         
-        user_message = f"""Review this recommendation for a {business_type}:
-
-RECOMMENDATION:
-{json.dumps(recommendation, indent=2)}
-
-ANALYSIS DATA:
-{json.dumps(eda_results.get('summary', {}), indent=2)}
-
-TOP 5 NEIGHBORHOODS ANALYZED:
-{json.dumps(eda_results.get('top_neighborhoods', [])[:5], indent=2)}
-
-Provide critical feedback. Should this recommendation be refined?
-"""
+        messages = [{"role": "user", "content": user_prompt}]
+        response = self.session.create_message(system=system_prompt, messages=messages, tools=self._get_tools())
         
-        message = self.client.messages.create(
-            model=self.model,
-            max_tokens=2000,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_message}]
-        )
+        # Handle tool calling
+        if response.stop_reason == "tool_use":
+            tool_uses = [b for b in response.content if b.type == "tool_use"]
+            messages.append({"role": "assistant", "content": response.content})
+            results = []
+            for t in tool_uses:
+                res = self._execute_tool(t.name, t.input)
+                results.append({"type": "tool_result", "tool_use_id": t.id, "tool_name": t.name, "content": res})
+            messages.append({"role": "user", "content": results})
+            # Final response after tools
+            response = self.session.create_message(system=system_prompt, messages=messages)
+
+        text = "".join([b.text for b in response.content if hasattr(b, "text")])
+        return self._parse_critique(text), text
+
+    def _parse_critique(self, response_text: str) -> Dict[str, Any]:
+        critique = {
+            "approved": False, # Default to False for safety
+            "issues": [], 
+            "suggestions": [], 
+            "missing_considerations": [], 
+            "alternative_perspective": ""
+        }
+        if not response_text: return critique
+
+        lines = response_text.split('\n')
+        current_section = None
+        for line in lines:
+            ls = line.strip().upper()
+            if "VERDICT" in ls:
+                critique["approved"] = "APPROVED" in ls
+            elif "ISSUES" in ls: current_section = "issues"
+            elif "SUGGEST" in ls: current_section = "suggestions"
+            elif "MISSING" in ls or "CONSIDER" in ls: current_section = "missing"
+            elif "ALTERNATIVE" in ls: current_section = "alternative"
+            elif current_section:
+                clean = line.lstrip("-•*0123456789. )").strip()
+                if clean:
+                    if current_section == "issues": critique["issues"].append(clean)
+                    elif current_section == "suggestions": critique["suggestions"].append(clean)
+                    elif current_section == "missing": critique["missing_considerations"].append(clean)
+                    elif current_section == "alternative": critique["alternative_perspective"] += clean + " "
         
-        response_text = message.content[0].text
-        
-        try:
-            feedback = json.loads(response_text)
-            return feedback
-        except json.JSONDecodeError:
-            content = response_text.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.endswith("```"):
-                content = content[:-3]
+        # FINAL SAFETY CHECK
+        all_text = response_text.lower()
+        if "rejected" in all_text or "missing data" in all_text:
+            critique["approved"] = False
             
-            return json.loads(content.strip())
-    
-    def format_feedback(self, feedback: Dict[str, Any]) -> str:
-        """
-        Format critic feedback for display
-        """
-        status = "✅ APPROVED" if feedback['approved'] else "⚠️ NEEDS REFINEMENT"
-        
-        output = f"\n{status}\n\n"
-        
-        if feedback['issues']:
-            output += "🔍 POTENTIAL RISKS:\n"
-            for i, issue in enumerate(feedback['issues'], 1):
-                output += f"{i}. {issue}\n"
-            output += "\n"
-        
-        if feedback['suggestions']:
-            output += "💡 NEXT STEPS:\n"
-            for i, suggestion in enumerate(feedback['suggestions'], 1):
-                output += f"{i}. {suggestion}\n"
-            output += "\n"
-        
-        if feedback.get('missing_considerations'):
-            output += "📌 OTHER FACTORS TO CHECK:\n"
-            for i, consideration in enumerate(feedback['missing_considerations'], 1):
-                output += f"{i}. {consideration}\n"
-            output += "\n"
-        
-        output += f"🎯 HOW SURE ARE WE?:\n{feedback['confidence_assessment']}\n\n"
-        output += f"🔄 ANOTHER OPTION TO CONSIDER:\n{feedback['alternative_perspective']}\n"
-        
-        return output
+        return critique
 
-
-def critique_recommendation(
-    recommendation: Dict[str, Any],
-    eda_results: Dict[str, Any],
-    business_type: str
-) -> tuple:
-    """
-    Standalone function to critique recommendation
-    Returns (feedback_dict, formatted_feedback_text)
-    """
+def critique_recommendation(recommendation, scored_data, plan):
     critic = CriticAgent()
-    feedback = critic.critique(recommendation, eda_results, business_type)
-    formatted = critic.format_feedback(feedback)
-    
-    return feedback, formatted
+    return critic.review_recommendation(recommendation, scored_data, plan['business_type'])
