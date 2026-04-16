@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 import json
 import os
 from agents.gemini_client import GeminiChatSession, DEFAULT_MODEL
@@ -35,7 +35,11 @@ class PlannerAgent:
                         "filters": {
                             "type": "object",
                             "properties": {
-                                "borough": {"type": "any", "description": "List of boroughs or 'ALL'"},
+                                "borough": {
+                                    "type": "array", 
+                                    "items": {"type": "string"},
+                                    "description": "List of boroughs or ['ALL']"
+                                },
                                 "min_population": {"type": "number"}
                             }
                         },
@@ -62,7 +66,7 @@ Do not provide a textual response, only the tool call."""
             borough_instruction = f"Filters.borough MUST be set to {json.dumps(borough_filter)}"
         else:
             borough_str = "ALL boroughs"
-            borough_instruction = 'Filters.borough MUST be set to "ALL"'
+            borough_instruction = 'Filters.borough MUST be set to ["ALL"]'
         # ============================================
 
         user_message = f"""Draft a plan for:

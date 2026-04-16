@@ -179,9 +179,9 @@ class MarketAnalystAgent:
     """
     Model-driven agent that triggers the EDA analysis tool
     """
-    def __init__(self, model_name: str = "models/gemini-2.0-flash"):
-        from agents.gemini_client import GeminiChatSession
-        self.session = GeminiChatSession(model=model_name)
+    def __init__(self, model_name: str = None):
+        from agents.gemini_client import GeminiChatSession, DEFAULT_MODEL
+        self.session = GeminiChatSession(model=model_name or DEFAULT_MODEL)
     
     def run_analysis(self, datasets: Dict[str, pd.DataFrame], weights: Dict[str, float], plan: Dict[str, Any]) -> tuple:
         system_prompt = "You are a specialized Market Analyst. You must invoke the 'perform_eda_calculations' tool to process the raw datasets."

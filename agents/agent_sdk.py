@@ -163,13 +163,23 @@ class LocationAnalysisAgent:
                         "key_strength": parts[-1].strip() if len(parts) > 1 else "Strong demographic profile"
                     })
 
-        # DATA-FIRST OVERRIDE: Ensure the score isn't hallucinated low
+        # DATA-FIRST OVERRIDE: Ensure the score isn't hallucinated low (or a fake 100.0)
         # Find the neighborhood in our source data to get the REAL score
         actual_data = next((v for k, v in nb_lookup.items() if rec["best_location"].lower() in k.lower()), None)
         if actual_data:
             rec["score"] = actual_data.get('final_score', rec["score"])
             if not rec["borough"] or rec["borough"] == "N/A":
                 rec["borough"] = actual_data.get('boro', rec["borough"])
+        else:
+            # If the model completely hallucinated a location name or we couldn't match it, 
+            # forcefully override it with the actual #1 candidate from our math!
+            best_nb = best.get("neighborhood", "Unknown Neighborhood")
+            print(f"⚠️ Model recommended unmatched neighborhood '{rec['best_location']} / {rec['score']}'. Forcing override to actual #1: {best_nb}")
+            rec["best_location"] = best_nb
+            rec["score"] = best.get("final_score", 0.0)
+            if not rec["borough"] or rec["borough"] == "N/A":
+                rec["borough"] = best.get("boro", "N/A")
+            actual_data = best
 
         # FALLBACK: If alternatives failed to parse, use top 3 from data
         if not rec["top_alternatives"]:
