@@ -37,7 +37,7 @@ class BusinessLocationOrchestrator:
         datasets = collect_data(plan)
         
         print("\n" + "="*50)
-        print("EDA AGENT")
+        print("MARKET ANALYST AGENT (EDA Step)")
         print("="*50)
         weights = {
             'demand': user_input.get('weight_demand', 0.25),
@@ -56,7 +56,7 @@ class BusinessLocationOrchestrator:
             self.iteration += 1
             
             print("\n" + "="*50)
-            print(f"HYPOTHESIS AGENT (Iteration {self.iteration})")
+            print(f"STRATEGIC HYPOTHESIS AGENT (Iteration {self.iteration})")
             print("="*50)
             
             # Pass previous critic feedback for improvement

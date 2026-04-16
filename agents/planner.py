@@ -13,148 +13,95 @@ class PlannerAgent:
         self.session = GeminiChatSession(model=model_name)
         self.model = model_name
     
+    def _get_tools(self) -> List[Dict[str, Any]]:
+        return [
+            {
+                "name": "set_analysis_plan",
+                "description": "Set the structured analysis plan for the business location study",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "business_type": {"type": "string", "description": "Type of business being analyzed"},
+                        "data_sources": {
+                            "type": "array", 
+                            "items": {"type": "string"},
+                            "description": "List of data sources to fetch (nyc_businesses, census, mta, etc.)"
+                        },
+                        "metrics_to_compute": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Key metrics to compute during EDA"
+                        },
+                        "filters": {
+                            "type": "object",
+                            "properties": {
+                                "borough": {"type": "any", "description": "List of boroughs or 'ALL'"},
+                                "min_population": {"type": "number"}
+                            }
+                        },
+                        "analysis_focus": {"type": "string", "description": "Primary goal/focus of the analysis"}
+                    },
+                    "required": ["business_type", "data_sources", "metrics_to_compute", "filters"]
+                }
+            }
+        ]
+
     def create_plan(self, user_input: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Create analysis plan from user input
+        Create analysis plan from user input via Tool Calling
         """
         system_prompt = """You are a data analysis planner for a business location advisor system.
-
-Given user input about a business type and preferences, create a structured JSON plan that includes:
-1. Business type
-2. Data sources to collect
-3. Metrics to compute
-4. Filters to apply
-
-Return ONLY valid JSON with this structure:
-{
-    "business_type": "string",
-    "data_sources": ["source1", "source2", "source3"],
-    "metrics_to_compute": ["metric1", "metric2", "metric3"],
-    "filters": {
-        "borough": ["borough1", "borough2"] or "ALL",
-        "min_population": number or null
-    },
-    "analysis_focus": "string describing what to prioritize"
-}
-
-Data sources available:
-- nyc_businesses: NYC business licenses
-- restaurants: Restaurant inspection data
-- census: Population, income, rent data by zip code
-- mta: Subway ridership for foot traffic proxy
-- demographics: Neighborhood demographics
-
-Key metrics to consider:
-- competition_count: Number of existing businesses
-- median_income: Average income level
-- population_density: Population per area
-- foot_traffic_score: Subway ridership proxy
-- rent_proxy: Cost of doing business
-- demand_score: Population-based demand estimate
-"""
+        
+Definitively set the analysis plan by calling the 'set_analysis_plan' tool.
+Do not provide a textual response, only the tool call."""
         
         # ========== BOROUGH FILTERING FIX ==========
-        # Extract borough filter from user input
         borough_filter = user_input.get('borough_filter')
-        
-        # Create geography string for the prompt
         if borough_filter and len(borough_filter) > 0:
             borough_str = f"Specific boroughs: {', '.join(borough_filter)}"
-            borough_instruction = f'Set filters.borough to {json.dumps(borough_filter)}'
+            borough_instruction = f"Filters.borough MUST be set to {json.dumps(borough_filter)}"
         else:
-            borough_str = "ALL boroughs (search city-wide)"
-            borough_instruction = 'Set filters.borough to "ALL"'
+            borough_str = "ALL boroughs"
+            borough_instruction = 'Filters.borough MUST be set to "ALL"'
         # ============================================
-        
-        user_message = f"""Create an analysis plan for:
 
-Business Type: {user_input.get('business_type', 'general business')}
-Geography: {borough_str}
+        user_message = f"""Draft a plan for:
+- Business: {user_input.get('business_type', 'business')}
+- Geography: {borough_str}
+- Priorities: {json.dumps(user_input)}
 
-User Priorities: 
-- Demand weight: {user_input.get('weight_demand', 0.25)}
-- Foot traffic weight: {user_input.get('weight_foot_traffic', 0.20)}
-- Income weight: {user_input.get('weight_income', 0.20)}
-- Competition weight: {user_input.get('weight_competition', 0.20)}
-- Rent weight: {user_input.get('weight_rent', 0.15)}
+IMPORTANT: {borough_instruction}"""
 
-IMPORTANT: {borough_instruction}
-"""
-        
         messages = [{"role": "user", "content": user_message}]
         
         response = self.session.create_message(
             system=system_prompt,
             messages=messages,
+            tools=self._get_tools(),
             max_tokens=1000,
         )
         
-        # Extract text from response
-        response_text = ""
+        # Process Tool Call
         for block in response.content:
-            if hasattr(block, "text"):
-                response_text += block.text
-        
-        # Robust JSON extraction
-        import re
-        def extract_first_json(text):
-            # 1. Strip markdown code blocks if they exist
-            # Matches ```json { ... } ``` or simply ``` { ... } ```
-            md_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', text, re.DOTALL)
-            if md_match:
-                text = md_match.group(1)
-            
-            # 2. Try to find the first complete { ... } block
-            # Balanced bracket approach
-            start = text.find('{')
-            if start == -1:
-                return None
-            
-            bracket_count = 0
-            for i in range(start, len(text)):
-                if text[i] == '{':
-                    bracket_count += 1
-                elif text[i] == '}':
-                    bracket_count -= 1
-                    if bracket_count == 0:
-                        return text[start:i+1]
-            return None
+            if hasattr(block, "type") and block.type == "tool_use":
+                if block.name == "set_analysis_plan":
+                    plan = block.input
+                    print(f"📋 Planner Agent invoked tool [set_analysis_plan] with focus: {plan.get('analysis_focus')}")
+                    # Ensure borough filter is consistent with input
+                    if borough_filter and len(borough_filter) > 0:
+                        plan['filters']['borough'] = borough_filter
+                    else:
+                        plan['filters']['borough'] = "ALL"
+                    return plan
 
-        try:
-            content = extract_first_json(response_text)
-            if not content:
-                # Fallback to pure regex if bracket count failed
-                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                content = json_match.group(0) if json_match else response_text.strip()
-                
-            plan = json.loads(content)
-            
-            # Ensure borough filter is correct
-            if 'filters' not in plan:
-                plan['filters'] = {}
-            
-            if borough_filter and len(borough_filter) > 0:
-                plan['filters']['borough'] = borough_filter
-            else:
-                plan['filters']['borough'] = "ALL"
-            
-            print(f"📋 Planner: Created plan with borough filter: {plan['filters'].get('borough')}")
-            return plan
-            
-        except (json.JSONDecodeError, ValueError) as e:
-            print(f"⚠️ Planner: JSON parse error ({str(e)}), attempting manual recovery...")
-            # Fallback to a very simple plan if all parsing fails
-            fallback_plan = {
-                "business_type": user_input.get('business_type', 'business'),
-                "data_sources": ["nyc_businesses", "census", "mta"],
-                "metrics_to_compute": ["competition_count", "median_income", "population_density"],
-                "filters": {
-                    "borough": borough_filter if (borough_filter and len(borough_filter) > 0) else "ALL",
-                    "min_population": 1000
-                },
-                "analysis_focus": "Balanced analysis based on user priorities"
-            }
-            return fallback_plan
+        # Fallback if no tool call was made
+        return {
+            "business_type": user_input.get('business_type', 'business'),
+            "data_sources": ["nyc_businesses", "census", "mta"],
+            "metrics_to_compute": ["competition_count", "median_income"],
+            "filters": {"borough": borough_filter or "ALL"},
+            "analysis_focus": "Standard business location analysis"
+        }
 
 
 def create_analysis_plan(user_input: Dict[str, Any]) -> Dict[str, Any]:

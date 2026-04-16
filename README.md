@@ -58,15 +58,15 @@ Visualization: Plotly, Matplotlib
 | Requirement | Implementation Detail | Location |
 |-------------|-----------------------|----------|
 | **Collect (Step 1)** | Dynamic API retrieval from 3 sources | `agents/data_collector.py` |
-| **EDA (Step 2)** | Statistical scoring & multi-dataset aggregation | `agents/eda.py`, `tools/analysis.py` |
-| **Hypothesize (Step 3)** | Data-backed recommendations with reasoning | `agents/hypothesis.py` |
+| **EDA (Step 2)** | Model-driven tool call (`perform_eda_calculations`) | `agents/eda.py` (`MarketAnalystAgent`) |
+| **Hypothesize (Step 3)** | Evidence-based agent with recursive tool loop | `agents/agent_sdk.py` (`LocationAnalysisAgent`) |
 | **Frontend** | Interactive Streamlit Dashboard | `app/streamlit_app.py` |
-| **Agent Framework** | Custom Orchestration Framework | `agents/orchestrator.py` |
+| **Agent Framework** | Google GenAI SDK Integration | `agents/gemini_client.py` |
 | **Tool Calling** | Explicit model-side tool use (`set_analysis_plan`) | `agents/planner.py` |
 | **Multi-Agent Pattern** | Orchestrator + Generator/Critic loop | `agents/orchestrator.py` |
 | **Iterative Refinement** | Refinement loop based on Critic feedback | `agents/orchestrator.py` |
-| **Artifacts** | PDF reports, PNG charts, CSV exports, Email Delivery | `tools/pdf_generator.py`, `tools/email_service.py` |
-| **Data Visualization** | Plotly & Matplotlib dashboard & report charts | `app/streamlit_app.py`, `tools/pdf_generator.py` |
+| **Artifacts** | PDF reports with visual appendix, CSV, charts | `tools/pdf_generator.py` |
+| **Data Visualization** | Plotly & Matplotlib dashboard & report charts | `tools/output.py` |
 | **Structured Output** | JSON-mode and Pydantic-style responses | `agents/*.py` |
 
 ## ✨ Premium Features

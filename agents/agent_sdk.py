@@ -35,35 +35,31 @@ class LocationAnalysisAgent:
 
     def generate_recommendation(self, scored_data: List[Dict], business_type: str, user_weights: Dict, previous_critique: Optional[Dict] = None) -> Dict[str, Any]:
         top_items = scored_data[:10]
-        # Store for lookup during parsing
         nb_lookup = {x.get('neighborhood', '').strip(): x for x in top_items}
-        
         summary_list = [f"- {x.get('neighborhood')} (EDA SCORE: {x.get('final_score', 0):.2f})" for x in top_items]
         
         system_prompt = f"""You are an expert NYC business location analyst.
     
-    STRICT DATA CONSTRAINT:
-    - You MUST use the 'EDA SCORE' provided in the candidate list for the 'SCORE' field.
-    - DO NOT recalculate or invent a new score.
+    STRICT RESEARCH PROTOCOL:
+    1. You must use 'get_neighborhood_details' to drill down into the top candidate before finalizing.
+    2. Use the 'EDA SCORE' provided in the candidate list for the 'SCORE' field.
     
     REQUIRED FINAL OUTPUT FORMAT:
     RECOMMENDED LOCATION: [Neighborhood Name]
     BOROUGH: [Borough Name]
-    SCORE: [Use the EDA SCORE from the list below]
+    SCORE: [Use the EDA SCORE]
     CONFIDENCE: [High/Medium/Low]
     REASONING:
-    - [Specific data point 1 e.g. 'Population of X provides a vast consumer base']
-    - [Specific data point 2 e.g. 'Only Y competitors in this area means less saturation']
-    - [Specific data point 3 e.g. 'High median income of $Z aligns with premium spending']
+    - [Specific data point 1]
+    - [Specific data point 2]
+    - [Specific data point 3]
     TRADE-OFFS:
-    - [Specific risk 1 e.g. 'Intense local competition' or 'High rental premiums']
+    - [Specific risk 1]
     ALTERNATIVES:
     - [Name 1] | Score: [EDA Score] | Strength: [Context]
-    - [Name 2] | Score: [EDA Score] | Strength: [Context]
     """
         
         user_prompt = f"""Target: {business_type} in NYC.
-        
     CANDIDATE LIST:
     {chr(10).join(summary_list)}
     """
@@ -71,9 +67,40 @@ class LocationAnalysisAgent:
             user_prompt += f"\n\nCRITIC FEEDBACK TO ADDRESS:\n{json.dumps(previous_critique, indent=2)}"
 
         messages = [{"role": "user", "content": user_prompt}]
-        response = self.session.create_message(system=system_prompt, messages=messages, tools=self._get_tools())
         
-        # Simple one-shot for now to ensure consistency, can add loop back if needed
+        # --- TOOL LOOP (Max 3 turns) ---
+        for i in range(3):
+            response = self.session.create_message(
+                system=system_prompt, 
+                messages=messages, 
+                tools=self._get_tools()
+            )
+            
+            tool_calls = [b for b in response.content if b.type == "tool_use"]
+            if not tool_calls:
+                # No tool calls, we have the final answer
+                text = "".join([b.text for b in response.content if b.type == "text"])
+                return self._parse_recommendation(text, top_items, nb_lookup)
+            
+            # Add model response to history
+            messages.append({"role": "model", "content": response.content})
+            
+            # Execute tools
+            tool_results = []
+            for tc in tool_calls:
+                print(f"🕵️ Analyst Agent invoking tool [{tc.name}] for {tc.input.get('neighborhood')}...")
+                result = self._execute_tool(tc.name, tc.input, scored_data)
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": tc.id,
+                    "tool_name": tc.name,
+                    "content": result
+                })
+            
+            # Add results to history
+            messages.append({"role": "user", "content": tool_results})
+            
+        # Final fallback if loop exceeds
         text = "".join([b.text for b in response.content if hasattr(b, "text")])
         return self._parse_recommendation(text, top_items, nb_lookup)
 

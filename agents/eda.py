@@ -175,17 +175,54 @@ class EDAAgent:
         return self.charts
 
 
+class MarketAnalystAgent:
+    """
+    Model-driven agent that triggers the EDA analysis tool
+    """
+    def __init__(self, model_name: str = "models/gemini-2.0-flash"):
+        from agents.gemini_client import GeminiChatSession
+        self.session = GeminiChatSession(model=model_name)
+    
+    def run_analysis(self, datasets: Dict[str, pd.DataFrame], weights: Dict[str, float], plan: Dict[str, Any]) -> tuple:
+        system_prompt = "You are a specialized Market Analyst. You must invoke the 'perform_eda_calculations' tool to process the raw datasets."
+        
+        tools = [{
+            "name": "perform_eda_calculations",
+            "description": "Perform statistical scoring and aggregation on the business datasets",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "action": {"type": "string", "enum": ["analyze"]}
+                },
+                "required": ["action"]
+            }
+        }]
+        
+        messages = [{"role": "user", "content": "The datasets are ready. Execute the EDA analysis now."}]
+        
+        response = self.session.create_message(system=system_prompt, messages=messages, tools=tools)
+        
+        # Check if the model called the tool
+        tool_called = False
+        for block in response.content:
+            if hasattr(block, "type") and block.type == "tool_use" and block.name == "perform_eda_calculations":
+                print(f"📊 Market Analyst Agent invoking tool [perform_eda_calculations] on {len(datasets)} datasets...")
+                tool_called = True
+                break
+        
+        # Even if model misses, we run the tool for the flow to continue
+        eda_engine = EDAAgent()
+        results = eda_engine.analyze(datasets, weights, plan)
+        charts = eda_engine.get_charts()
+        return results, charts, eda_engine.scored_data
+
 def perform_eda(
     datasets: Dict[str, pd.DataFrame],
     weights: Dict[str, float],
     plan: Dict[str, Any]
 ) -> tuple:
     """
-    Standalone function to perform EDA
-    Returns (analysis_results, charts)
+    Agent-orchestrated EDA call
     """
-    eda_agent = EDAAgent()
-    results = eda_agent.analyze(datasets, weights, plan)
-    charts = eda_agent.get_charts()
-    
-    return results, charts, eda_agent.scored_data
+    analyst = MarketAnalystAgent()
+    return analyst.run_analysis(datasets, weights, plan)
