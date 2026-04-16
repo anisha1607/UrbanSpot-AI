@@ -3,279 +3,161 @@
 ## Project Structure
 
 ```
-business-location-advisor/
+UrbanSpot-AI/
 │
 ├── agents/                      # Multi-agent system
 │   ├── __init__.py
 │   ├── planner.py              # Interprets user input, creates plan
 │   ├── data_collector.py       # Fetches data from APIs
-│   ├── eda.py                  # Performs exploratory analysis
-│   ├── hypothesis.py           # Generates recommendations
-│   ├── critic.py               # Reviews and refines
-│   └── orchestrator.py         # LangGraph workflow coordination
+│   ├── eda.py                  # Agentic EDA (Market Analyst Agent)
+│   ├── agent_sdk.py            # Core Agent SDK with recursive tool use
+│   ├── gemini_client.py        # Unified Google GenAI SDK interface
+│   ├── hypothesis.py           # Strategic recommendation generation
+│   ├── critic.py               # Reviews and refines recommendations
+│   ├── orchestrator.py         # Custom multi-agent orchestration
+│   └── safe_agent_wrapper.py   # Error handling for agent calls
 │
 ├── tools/                       # Data collection and analysis tools
 │   ├── __init__.py
 │   ├── nyc_data.py             # NYC Open Data API integration
 │   ├── census_data.py          # US Census API integration
 │   ├── mta_data.py             # MTA subway data
-│   ├── analysis.py             # EDA and scoring functions
-│   └── output.py               # Chart and artifact generation
+│   ├── analysis.py             # Statistical scoring functions
+│   ├── output.py               # Chart and artifact generation
+│   ├── pdf_generator.py        # Professional PDF report generation
+│   └── email_service.py        # Automated report delivery
 │
 ├── schemas/                     # Data models
 │   ├── __init__.py
 │   └── models.py               # Pydantic schemas
 │
 ├── app/                         # Frontend
-│   └── streamlit_app.py        # Streamlit web interface
+│   ├── streamlit_app.py        # Streamlit web interface
+│   └── server.py               # Backup Flask server logic
 │
-├── docs/                        # Documentation
-│   ├── QUICKSTART.md           # 5-minute setup guide
-│   ├── API_USAGE.md            # Python API documentation
-│   └── ARCHITECTURE.md         # System architecture
+├── tests/                       # Validation suite
+│   ├── test_agents.py          # Agent and tool tests
+│   ├── test_scores.py          # Statistical scoring validation
+│   └── test_tool_history.py    # Recursive tool use verification
 │
-├── tests/                       # Unit tests
-│   └── test_agents.py          # Agent and tool tests
-│
-├── data/
-│   └── outputs/                # Generated artifacts (CSV, charts)
-│
-├── examples.py                  # Example usage scripts
 ├── requirements.txt             # Python dependencies
 ├── .env.example                # Environment variables template
-├── .gitignore                  # Git ignore rules
-├── render.yaml                 # Render deployment config
-└── README.md                   # Main documentation
-
+├── render.yaml                 # Render deployment configuration
+└── README.md                   # Primary project documentation
 ```
 
 ## File Count Summary
 
-- **Python Files**: 21
-- **Documentation**: 4 markdown files
+- **Python Files**: ~25
+- **Documentation**: README.md, PROJECT_SUMMARY.md
 - **Configuration**: 4 files
-- **Total Lines**: ~3,500+ lines of code
+- **Total Lines**: ~4,000+ lines of code
 
 ## Key Components
 
 ### 1. Multi-Agent System (agents/)
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| planner.py | ~100 | Creates analysis plan from user input |
-| data_collector.py | ~150 | Fetches and normalizes data from APIs |
-| eda.py | ~200 | Performs exploratory data analysis |
-| hypothesis.py | ~150 | Generates data-backed recommendations |
-| critic.py | ~130 | Reviews recommendations critically |
-| orchestrator.py | ~250 | LangGraph workflow orchestration |
+| File | Class / Component | Purpose |
+|------|-------------------|---------|
+| planner.py | `PlannerAgent` | Parses user intent into structured JSON plans |
+| data_collector.py | `DataCollectorAgent` | Executes dynamic multi-API data retrieval |
+| eda.py | `MarketAnalystAgent` | Performs agentic EDA via tool calls |
+| agent_sdk.py | `LocationAnalysisAgent` | Conducts deep research using recursive tool use |
+| orchestrator.py | `BusinessLocationOrchestrator` | Manages handoffs and iterative critic loops |
+| gemini_client.py | `GeminiChatSession` | Standardized interface for Google GenAI SDK |
 
 ### 2. Data Tools (tools/)
 
-| File | Lines | Purpose |
+| File | Focus | Purpose |
 |------|-------|---------|
-| nyc_data.py | ~170 | NYC Open Data integration |
-| census_data.py | ~180 | US Census API integration |
-| mta_data.py | ~120 | MTA subway ridership data |
-| analysis.py | ~200 | Data merging and scoring |
-| output.py | ~180 | Visualization and export |
+| nyc_data.py | Business Data | Real-time NYC Open Data integration |
+| census_data.py | Demographics | US Census API integration (Income/Population) |
+| mta_data.py | Foot Traffic | MTA subway ridership as foot traffic proxy |
+| output.py | Visualization | Plotly and Matplotlib chart generation |
+| pdf_generator.py | Reporting | Professional PDF synthesis with visual appendix |
 
-### 3. Schemas (schemas/)
+### 3. Frontend (app/)
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| models.py | ~90 | Pydantic data validation models |
-
-### 4. Frontend (app/)
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| streamlit_app.py | ~250 | Interactive web interface |
-
-### 5. Documentation (docs/)
-
-| File | Lines | Purpose |
-|------|-------|---------|
-| QUICKSTART.md | ~300 | Quick start guide |
-| API_USAGE.md | ~450 | Python API documentation |
-| ARCHITECTURE.md | ~400 | System architecture |
+| File | Type | Purpose |
+|------|------|---------|
+| streamlit_app.py | Streamlit | Interactive dashboard and user interface |
 
 ## Features Implemented
 
 ✅ **Runtime Data Retrieval**
-- NYC Open Data API integration
-- US Census Bureau API
-- MTA turnstile data
-- No hardcoded datasets
+- Integrated with 3 external APIs (NYC Open Data, Census, MTA).
+- Dynamic fetching based on business type (e.g., gym, salon, restaurant).
+- No hardcoded datasets; all analysis is live.
 
-✅ **Exploratory Data Analysis**
-- pandas for data manipulation
-- DuckDB for SQL queries
-- Aggregation by neighborhood
-- Metric computation and normalization
+✅ **Agentic Exploratory Data Analysis (EDA)**
+- **Market Analyst Agent** specifically invokes tool calls to process data.
+- Aggregates by borough and zip code.
+- Computes demand scores and competition density.
+
+✅ **Deep Research Hypothesis Phase**
+- **Location Analysis Agent** uses an iterative "research loop."
+- Uses tool calls to "drill down" into specific neighborhood metrics before finalizing tips.
+- Evidence-based reasoning grounded in retrieved data points.
 
 ✅ **Multi-Agent Architecture**
-- 5 specialized agents
-- LangGraph orchestration
-- State management
-- Agent communication
+- Generator-Critic autonomous refinement loop.
+- Orchestrator handles handoffs between 5+ specialized agents.
+- Custom framework built on Google GenAI SDK.
 
-✅ **Data Visualization**
-- 4 Plotly chart types
-- Interactive HTML exports
-- Score distributions
-- Metric comparisons
-
-✅ **Artifact Generation**
-- CSV exports of scored data
-- Text analysis reports
-- HTML visualizations
-- Downloadable outputs
+✅ **Artifact & Visualization Engine**
+- Interactive Plotly charts and robust Matplotlib fallbacks.
+- Professional PDF reports synthesized from analysis results.
+- CSV exports of all computed neighborhood scores.
 
 ✅ **Iterative Refinement**
-- Generator-Critic loop
-- Maximum 2 iterations
-- Quality improvement
-- Assumption validation
+- Critic Agent reviews the "Generator's" output.
+- Triggers autonomous re-analysis if reasoning is weak or data is missing.
 
 ✅ **Structured Outputs**
-- Pydantic validation
-- JSON schemas
-- Type safety
-- Error handling
-
-✅ **Deployment Ready**
-- Streamlit Cloud compatible
-- Render configuration
-- Environment variable management
-- Production-ready setup
+- Strict JSON-mode extraction for analysis plans.
+- Pydantic-style validation for all inter-agent communication.
 
 ## API Integrations
 
 ### NYC Open Data
-- Business licenses dataset
-- Restaurant inspections
-- Demographic statistics
-- Rate limit: 1000/day (no token)
+- Business licenses dataset (Real-time).
+- Restaurant inspections as a proxy for retail density.
 
 ### US Census Bureau
-- ACS 5-year estimates
-- Population by zip code
-- Median income data
-- Median rent data
+- ACS 5-year estimates by zip code.
+- Median income, population density, and rent data.
 
 ### MTA
-- Subway turnstile data
-- Station ridership
-- Foot traffic proxy
+- Subway turnstile ridership data.
+- Localized station-to-neighborhood routing.
 
 ## Scoring Methodology
 
+The system uses an absolute mathematical benchmark for scoring:
 ```python
-Score = w1 × Demand_normalized 
-      + w2 × Foot_Traffic_normalized 
-      + w3 × Income_normalized 
-      - w4 × Competition_normalized 
-      - w5 × Rent_normalized
+Score = w1 × Demand + w2 × Foot_Traffic + w3 × Income - w4 × Competition - w5 × Rent
 ```
+- Metrics are normalized to [0,1] or [0,100] globally.
+- Weights are user-steerable via the frontend.
 
-All metrics normalized to [0,1] range.
+## Testing & Validation
 
-## Testing Coverage
-
-- Unit tests for data analysis
-- Pydantic validation tests
-- Normalization tests
-- Scoring computation tests
-- Integration test examples
-
-## Documentation Coverage
-
-1. **README.md**: Comprehensive project overview
-2. **QUICKSTART.md**: 5-minute setup guide
-3. **API_USAGE.md**: Detailed Python API docs
-4. **ARCHITECTURE.md**: System design documentation
-5. **Inline comments**: Throughout codebase
-
-## Deployment Options
-
-1. **Streamlit Cloud**: One-click deployment
-2. **Render**: Container-based deployment
-3. **Local**: Development server
-4. **Custom**: Docker, AWS, GCP, Azure
-
-## Next Steps for Enhancement
-
-### Immediate Improvements
-- Add data caching layer
-- Implement async API calls
-- Add progress indicators
-- Enhance error messages
-
-### Future Features
-- Historical trend analysis
-- Competitive landscape mapping
-- ROI calculator
-- Multi-city support
-- Real-time data streaming
-
-### Performance Optimizations
-- Parallel data fetching
-- Database caching
-- CDN for static assets
-- Query optimization
-
-### Additional Agents
-- Market trends analyzer
-- Risk assessment agent
-- Financial projection agent
-- Regulatory compliance checker
-
-## Usage Statistics
-
-**Estimated Runtime**:
-- Data collection: 30-60 seconds
-- EDA processing: 20-30 seconds
-- Agent reasoning: 15-20 seconds
-- Total: 1-2 minutes per analysis
-
-**Data Volume**:
-- ~50K restaurant records
-- ~300 zip codes
-- ~200 neighborhoods
-- ~100K subway entries
-
-**Output Size**:
-- Scored CSV: ~50-100 KB
-- Report text: ~5 KB
-- Charts: ~200 KB each
-
-## Success Metrics
-
-This implementation achieves:
-
-✅ Complete data analysis lifecycle  
-✅ Real-world API integration  
-✅ Production-ready architecture  
-✅ Comprehensive documentation  
-✅ Multi-agent coordination  
-✅ Interactive visualization  
-✅ Deployment configuration  
-✅ Testing framework  
+- **test_scores.py**: Validates normalization and aggregation math.
+- **test_tool_history.py**: Verifies the recursive research loop in the Hypothesis agent.
+- **test_agents.py**: End-to-end integration tests for agent handoffs.
 
 ## Project Completion Status: 100%
 
-All components from the roadmap have been implemented:
-- ✅ Planner Agent
-- ✅ Data Collector Agent
-- ✅ EDA Agent
-- ✅ Hypothesis Agent
-- ✅ Critic Agent
-- ✅ Orchestrator (LangGraph)
+All components from the roadmap have been implemented and verified:
+- ✅ Planner Agent (JSON Plans)
+- ✅ Data Collector Agent (API HITS)
+- ✅ Market Analyst Agent (Agentic EDA)
+- ✅ Location Analysis Agent (Deep Research Loop)
+- ✅ Critic Agent (Refinement Loop)
+- ✅ Orchestrator (Custom Multi-Agent Flow)
 - ✅ Data Tools (NYC, Census, MTA)
-- ✅ Analysis Pipeline
-- ✅ Streamlit Frontend
-- ✅ Visualization Generation
-- ✅ Artifact Export
-- ✅ Documentation
-- ✅ Tests
-- ✅ Deployment Config
+- ✅ Visualization & PDF Artifact Generation
+- ✅ Production Streamlit Frontend
+
+---
+*Updated: April 16, 2026*

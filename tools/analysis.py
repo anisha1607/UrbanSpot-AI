@@ -1,12 +1,10 @@
 import pandas as pd
-import duckdb
 from typing import Dict, List, Tuple
 import numpy as np
 
 
 class DataAnalyzer:
     def __init__(self):
-        self.con = duckdb.connect(database=':memory:')
         # Real NYC residential zip codes by borough
         self.nyc_residential_zips = {
             'MANHATTAN': ['10001', '10002', '10003', '10009', '10010', '10011', '10012', '10013', '10014', 

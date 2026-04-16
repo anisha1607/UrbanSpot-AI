@@ -1,4 +1,3 @@
-import duckdb
 from tools.analysis import DataAnalyzer
 import pandas as pd
 
