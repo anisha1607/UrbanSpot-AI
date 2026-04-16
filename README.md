@@ -37,7 +37,7 @@ This project fulfills all **Core Requirements** and **4 Elective Concepts** from
 | **README.md** | Comprehensive project documentation | `README.md` |
 
 ### Advanced Techniques
-| Concept | Description | Location (File + Class/Function) |
+| Concept | Description | Location (File) |
 |---------|-------------|----------------------------------|
 | **Iterative Refinement** | Critic Agent triggers re-analysis if quality is low | `agents/orchestrator.py` |
 | **Artifacts** | Persistent PDF reports, PNG charts, and CSV data | `tools/pdf_generator.py`, `tools/output.py` |
