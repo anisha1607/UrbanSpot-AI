@@ -386,8 +386,8 @@ if 'result' in st.session_state:
         
         import re
         def md_to_html(text):
-            # Convert **text** to <b>text</b>
-            return re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', str(text))
+            # Remove ** markers for simplicity as requested
+            return str(text).replace('**', '')
             
         for idx, reason in enumerate(recs.get('reasoning', [])):
             clean_reason = md_to_html(reason).replace('$', '&#36;')
@@ -522,10 +522,10 @@ if 'result' in st.session_state:
         elif charts:
             # charts are saved HTML file paths; embed them into Streamlit
             chart_names = [
-                ("🏆 Neighborhood Suitability Rankings", "Overall composite score for the top 10 candidate locations"),
-                ("⚖️ Multi-Metric Comparison", "Normalized side-by-side view of competition, income, rent & population"),
-                ("📊 Score Distribution", "How all analyzed neighborhoods are spread across score ranges"),
-                ("📍 Income vs Competition Matrix", "Sweet-spot analysis mapping wealth against market saturation")
+                ("🏆 Top Neighborhood Rankings", "The ultimate ranking of your best locations. A taller bar means a more perfect blend of high traffic, wealthy clients, and low expenses."),
+                ("⚖️ Detailed Neighborhood Breakdown", "The individual strengths of each neighborhood. Check the spikes for specific local advantages like extremely low rent or massive transit availability!"),
+                ("📊 Overall Market Distribution", "A market-wide perspective illustrating how your selected top locations absolutely dominate the vast majority of 'average' zip codes in NYC."),
+                ("📍 The 'Sweet Spot' Matrix (Income vs Competition)", "The ultimate business target! The most profitable locations to target sit strictly on the far right (Highest Wealth) while remaining close to the bottom (Lowest Competition).")
             ]
             for i, chart_path in enumerate(charts):
                 try:
@@ -555,16 +555,18 @@ if 'result' in st.session_state:
         else:
             st.warning("⚠️ Recommendation Needs Refinement")
         
-        # Helper to filter out "data quality" mentions
-        def _filter_data_quality(text):
-            """Remove any text containing 'data quality' keyword."""
-            if not text:
+        # Helper to filter and clean text
+        def _clean_text(text):
+            """Remove '**' and filter 'data quality' mentions."""
+            if not text or not isinstance(text, str):
                 return text
-            if isinstance(text, str):
-                if 'data quality' in text.lower():
-                    return None
-                return text
-            return text
+            
+            # Filter out "data quality" mentions
+            if 'data quality' in text.lower():
+                return None
+                
+            # Remove '**'
+            return text.replace('**', '')
         
         # Critic Feedback UI Polish
         critic_html = '<div class="report-card"><h4>🔍 Critic Analysis</h4>'
@@ -579,7 +581,7 @@ if 'result' in st.session_state:
         
         # Issues
         if feedback['issues']:
-            filtered_issues = [i for i in feedback['issues'] if _filter_data_quality(i)]
+            filtered_issues = [i for i in [_clean_text(issue) for issue in feedback['issues']] if i]
             if filtered_issues:
                 critic_html += '<p><strong>Issues Identified:</strong></p><ul>'
                 for issue in filtered_issues:
@@ -588,7 +590,7 @@ if 'result' in st.session_state:
         
         # Suggestions        
         if feedback['suggestions']:
-            filtered_suggestions = [s for s in feedback['suggestions'] if _filter_data_quality(s)]
+            filtered_suggestions = [s for s in [_clean_text(suggestion) for suggestion in feedback['suggestions']] if s]
             if filtered_suggestions:
                 critic_html += '<p><strong>Strategic Suggestions:</strong></p><ul>'
                 for sug in filtered_suggestions:
@@ -597,7 +599,7 @@ if 'result' in st.session_state:
 
         # Missing Considerations
         if feedback.get('missing_considerations'):
-            filtered_considerations = [c for c in feedback['missing_considerations'] if _filter_data_quality(c)]
+            filtered_considerations = [c for c in [_clean_text(consideration) for consideration in feedback['missing_considerations']] if c]
             if filtered_considerations:
                 critic_html += '<p><strong>Missing Context:</strong></p><ul>'
                 for item in filtered_considerations:
@@ -608,7 +610,7 @@ if 'result' in st.session_state:
         
         # Alternative Perspective
         alt_perspective = feedback.get('alternative_perspective', '')
-        filtered_alt = _filter_data_quality(alt_perspective)
+        filtered_alt = _clean_text(alt_perspective)
         if filtered_alt:
             alt_html = f'<div class="report-card" style="background-color: #f8f9fa;"><h4>💡 Strategic Perspective</h4><p>{filtered_alt}</p></div>'
             critic_html += alt_html
